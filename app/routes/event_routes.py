@@ -2,10 +2,6 @@ from flask import Blueprint, jsonify
 from ..services import get_events
 event_bp = Blueprint('event', __name__)
 
-@event_bp.route('/')
-def home():
-    return "API OK"
-
 @event_bp.route('/events')
 def get_events_route():
     events = get_events()
