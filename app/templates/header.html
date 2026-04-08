@@ -1,0 +1,40 @@
+<header class="ticket-header">
+  <div class="container">
+    <div class="ticket-header__inner">
+      <a href="#" class="ticket-brand">
+        <i class="fas fa-ticket-alt"></i>
+        <span>TicketHub</span>
+      </a>
+
+      <form class="ticket-search desktop-only" action="#" method="get">
+        <input
+          type="text"
+          name="keyword"
+          value="{{ request.args.get('keyword', '') }}"
+          placeholder="Nhập từ khóa cần tìm kiếm"
+        />
+        <button type="submit" aria-label="Tìm kiếm">
+          <i class="fas fa-search"></i>
+        </button>
+      </form>
+      <div class="ticket-actions">
+        <a href="#"> <i class="fas fa-user me-1"></i>Đăng nhập</a>
+        <a href="#"> <i class="fas fa-user-plus me-1"></i>Đăng ký</a>
+      </div>
+    </div>
+
+    <div class="ticket-mobile-search">
+      <form class="ticket-search" action="#" method="get">
+        <input
+          type="text"
+          name="keyword"
+          value="{{ request.args.get('keyword', '') }}"
+          placeholder="Nhập từ khóa cần tìm kiếm"
+        />
+        <button type="submit" aria-label="Tìm kiếm">
+          <i class="fas fa-search"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+</header>
