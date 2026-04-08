@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from .config import Config
+from config import Config
 
 db = SQLAlchemy()
 
@@ -12,9 +12,11 @@ def create_app():
 
     from . import models
     from .routes.event_routes import event_bp
-    from .routes.main import main  
+    from .routes.login_routes import login_bp
+    from .routes.main import main
 
     app.register_blueprint(event_bp)
-    app.register_blueprint(main)   
+    app.register_blueprint(login_bp)
+    app.register_blueprint(main)
 
     return app
