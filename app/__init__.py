@@ -12,7 +12,9 @@ def create_app():
 
     from . import models
     from .routes.event_routes import event_bp
+    from .routes.login_routes import login_bp
 
     app.register_blueprint(event_bp)
+    app.register_blueprint(login_bp)
 
     return app
