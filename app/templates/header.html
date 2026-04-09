@@ -6,17 +6,85 @@
         <span>TicketHub</span>
       </a>
 
-      <form class="ticket-search desktop-only" action="{{ url_for('main.index') }}" method="get">
-        <input
-          type="text"
-          name="keyword"
-          value="{{ request.args.get('keyword', '') }}"
-          placeholder="Nhập từ khóa cần tìm kiếm"
-        />
-        <button type="submit" aria-label="Tìm kiếm">
-          <i class="fas fa-search"></i>
-        </button>
-      </form>
+      <div class="ticket-searchbar desktop-only">
+        <form class="ticket-search js-ui-only-form" action="#" method="get">
+          <input type="text" name="keyword" placeholder="Bạn tìm gì hôm nay?" />
+          <button type="button" aria-label="Tìm kiếm">Tìm kiếm</button>
+        </form>
+
+        <div class="ticket-filter-wrap">
+          <button type="button" class="ticket-filter-btn" id="ticketFilterBtnDesktop" aria-haspopup="dialog"
+            aria-expanded="false">
+            Bộ lọc
+          </button>
+
+          <div class="ticket-filter-panel is-hidden" id="ticketFilterPanelDesktop" role="dialog" aria-label="Bộ lọc">
+            <form class="js-ui-only-form" action="#" method="get">
+
+              <div class="ticket-filter-panel__grid">
+                <div class="row g-3">
+                  <div class="col-12 col-md-6">
+                    <label class="form-label" for="filterStartDateDesktop">Ngày bắt đầu</label>
+                    <div class="input-group">
+                      <input id="filterStartDateDesktop" type="date" class="form-control" name="startDate" value="" />
+                      <span class="input-group-text" aria-hidden="true">
+                        <i class="fa-regular fa-calendar"></i>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <label class="form-label" for="filterEndDateDesktop">Ngày kết thúc</label>
+                    <div class="input-group">
+                      <input id="filterEndDateDesktop" type="date" class="form-control" name="endDate" value="" />
+                      <span class="input-group-text" aria-hidden="true">
+                        <i class="fa-regular fa-calendar"></i>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <label class="form-label" for="filterEventTypeDesktop">Danh mục</label>
+                    <select id="filterEventTypeDesktop" class="form-select" name="eventTypeId">
+                      <option value="" selected>Tất cả</option>
+                    </select>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <label class="form-label" for="filterLocationDesktop">Địa điểm</label>
+                    <input id="filterLocationDesktop" type="text" class="form-control" name="location" value=""
+                      placeholder="Nhập địa điểm" />
+                  </div>
+
+                  <div class="col-12">
+                    <div class="ticket-filter-price">
+                      <div class="ticket-filter-price__title">Khoảng giá</div>
+                      <div class="ticket-filter-price__fields">
+                        <div>
+                          <label class="form-label" for="filterPriceMinDesktop">Từ</label>
+                          <input id="filterPriceMinDesktop" type="number" min="0" step="50000" class="form-control"
+                            name="priceMin" value="" placeholder="0" />
+                        </div>
+                        <div class="ticket-filter-price__dash" aria-hidden="true">-</div>
+                        <div>
+                          <label class="form-label" for="filterPriceMaxDesktop">Đến</label>
+                          <input id="filterPriceMaxDesktop" type="number" min="0" step="50000" class="form-control"
+                            name="priceMax" value="" placeholder="1.000.000" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="ticket-filter-panel__actions">
+                <button type="button" class="btn btn-primary">Áp dụng</button>
+                <button type="button" class="btn btn-outline-secondary js-ticket-filter-close">Đóng</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
       <div class="ticket-actions">
         <a href="#"> <i class="fas fa-user me-1"></i>Đăng nhập</a>
         <a href="#"> <i class="fas fa-user-plus me-1"></i>Đăng ký</a>
@@ -24,17 +92,147 @@
     </div>
 
     <div class="ticket-mobile-search">
-      <form class="ticket-search" action="{{ url_for('main.index') }}" method="get">
-        <input
-          type="text"
-          name="keyword"
-          value="{{ request.args.get('keyword', '') }}"
-          placeholder="Nhập từ khóa cần tìm kiếm"
-        />
-        <button type="submit" aria-label="Tìm kiếm">
-          <i class="fas fa-search"></i>
-        </button>
-      </form>
+      <div class="ticket-searchbar">
+        <form class="ticket-search js-ui-only-form" action="#" method="get">
+          <input type="text" name="keyword" placeholder="Bạn tìm gì hôm nay?" />
+          <button type="button" aria-label="Tìm kiếm">Tìm kiếm</button>
+        </form>
+
+        <div class="ticket-filter-wrap">
+          <button type="button" class="ticket-filter-btn" id="ticketFilterBtnMobile" aria-haspopup="dialog"
+            aria-expanded="false">
+            Bộ lọc
+          </button>
+
+          <div class="ticket-filter-panel is-hidden" id="ticketFilterPanelMobile" role="dialog" aria-label="Bộ lọc">
+            <form class="js-ui-only-form" action="#" method="get">
+
+              <div class="ticket-filter-panel__grid">
+                <div class="row g-3">
+                  <div class="col-12 col-md-6">
+                    <label class="form-label" for="filterStartDateMobile">Ngày bắt đầu</label>
+                    <div class="input-group">
+                      <input id="filterStartDateMobile" type="date" class="form-control" name="startDate" value="" />
+                      <span class="input-group-text" aria-hidden="true">
+                        <i class="fa-regular fa-calendar"></i>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <label class="form-label" for="filterEndDateMobile">Ngày kết thúc</label>
+                    <div class="input-group">
+                      <input id="filterEndDateMobile" type="date" class="form-control" name="endDate" value="" />
+                      <span class="input-group-text" aria-hidden="true">
+                        <i class="fa-regular fa-calendar"></i>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <label class="form-label" for="filterEventTypeMobile">Danh mục</label>
+                    <select id="filterEventTypeMobile" class="form-select" name="eventTypeId">
+                      <option value="" selected>Tất cả</option>
+                    </select>
+                  </div>
+
+                  <div class="col-12 col-md-6">
+                    <label class="form-label" for="filterLocationMobile">Địa điểm</label>
+                    <input id="filterLocationMobile" type="text" class="form-control" name="location" value=""
+                      placeholder="Nhập địa điểm" />
+                  </div>
+
+                  <div class="col-12">
+                    <div class="ticket-filter-price">
+                      <div class="ticket-filter-price__title">Khoảng giá</div>
+                      <div class="ticket-filter-price__fields">
+                        <div>
+                          <label class="form-label" for="filterPriceMinMobile">Từ</label>
+                          <input id="filterPriceMinMobile" type="number" min="0" step="50000" class="form-control"
+                            name="priceMin" value="" placeholder="0" />
+                        </div>
+                        <div class="ticket-filter-price__dash" aria-hidden="true">-</div>
+                        <div>
+                          <label class="form-label" for="filterPriceMaxMobile">Đến</label>
+                          <input id="filterPriceMaxMobile" type="number" min="0" step="50000" class="form-control"
+                            name="priceMax" value="" placeholder="1.000.000" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="ticket-filter-panel__actions">
+                <button type="button" class="btn btn-primary">Áp dụng</button>
+                <button type="button" class="btn btn-outline-secondary js-ticket-filter-close">Đóng</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </header>
+
+<script>
+  (function () {
+    function disableUiOnlyForms() {
+      const forms = document.querySelectorAll("form.js-ui-only-form");
+      forms.forEach(function (form) {
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+        });
+      });
+    }
+
+    function setupFilterDropdown(buttonId, panelId) {
+      const btn = document.getElementById(buttonId);
+      const panel = document.getElementById(panelId);
+      if (!btn || !panel) return;
+
+      function close() {
+        panel.classList.add("is-hidden");
+        btn.setAttribute("aria-expanded", "false");
+      }
+
+      function open() {
+        panel.classList.remove("is-hidden");
+        btn.setAttribute("aria-expanded", "true");
+      }
+
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
+        const isHidden = panel.classList.contains("is-hidden");
+        if (isHidden) open();
+        else close();
+      });
+
+      panel.addEventListener("click", function (e) {
+        const closeBtn = e.target.closest(".js-ticket-filter-close");
+        if (closeBtn) {
+          e.preventDefault();
+          close();
+        }
+      });
+
+      document.addEventListener("click", function (e) {
+        if (panel.classList.contains("is-hidden")) return;
+        if (btn.contains(e.target) || panel.contains(e.target)) return;
+        close();
+      });
+
+      document.addEventListener("keydown", function (e) {
+        if (e.key !== "Escape") return;
+        if (panel.classList.contains("is-hidden")) return;
+        close();
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      disableUiOnlyForms();
+      setupFilterDropdown("ticketFilterBtnDesktop", "ticketFilterPanelDesktop");
+      setupFilterDropdown("ticketFilterBtnMobile", "ticketFilterPanelMobile");
+    });
+  })();
+</script>
