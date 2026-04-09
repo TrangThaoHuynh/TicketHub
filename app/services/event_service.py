@@ -1,9 +1,10 @@
 from ..models.event import Event
 from .. import db
 
+#lấy tất cả sự kiện
 def get_events():
     return Event.query.all()
-
+#lấy theo id
 def get_event_by_id(event_id):
     return Event.query.get(event_id)
 
