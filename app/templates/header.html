@@ -6,7 +6,7 @@
         <span>TicketHub</span>
       </a>
 
-      <form class="ticket-search desktop-only" action="#" method="get">
+      <form class="ticket-search desktop-only" action="{{ url_for('main.index') }}" method="get">
         <input
           type="text"
           name="keyword"
@@ -24,7 +24,7 @@
     </div>
 
     <div class="ticket-mobile-search">
-      <form class="ticket-search" action="#" method="get">
+      <form class="ticket-search" action="{{ url_for('main.index') }}" method="get">
         <input
           type="text"
           name="keyword"
