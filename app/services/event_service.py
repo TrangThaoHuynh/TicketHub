@@ -4,10 +4,10 @@ from ..models.ticket_type import TicketType
 from .. import db
 from sqlalchemy import func
 
+#lấy tất cả sự kiện
 def get_events():
     return Event.query.all()
-
-
+  
 def get_event_types(only_active: bool = True):
     query = EventType.query
     if only_active:
@@ -46,7 +46,7 @@ def get_home_events(keyword=None, event_type_id=None):
         setattr(event, "min_price", min_price)
         events.append(event)
     return events
-
+  
 def get_event_by_id(event_id):
     return Event.query.get(event_id)
 
