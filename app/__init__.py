@@ -1,6 +1,20 @@
+import os
+import cloudinary
+from dotenv import load_dotenv
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from .config import Config
+
+#Load biến môi trường từ file .env
+load_dotenv()
+
+# cấu hình Cloudinary
+cloudinary.config(
+    cloud_name=os.getenv("CLOUD_NAME"),
+    api_key=os.getenv("API_KEY"),
+    api_secret=os.getenv("API_SECRET"),
+    secure=True
+)
 
 db = SQLAlchemy()
 
