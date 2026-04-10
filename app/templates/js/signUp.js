@@ -1,7 +1,11 @@
 const validators = {
-	displayName: (value) => value.trim().length >= 3,
+	displayName: (value) => {
+		const normalized = value.trim().replace(/\s+/g, " ");
+		return normalized.length >= 3 && /^[\p{L}\s]+$/u.test(normalized);
+	},
 	email: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim()),
 	phone: (value) => /^0\d{9,10}$/.test(value.trim()),
+	accountType: (value) => value === "customer" || value === "organizer",
 	username: (value) => /^[a-zA-Z0-9_]{4,20}$/.test(value.trim()),
 	password: (value) => /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(value),
 	confirmPassword: (value) => value === document.getElementById("password")?.value && value.length > 0
@@ -10,7 +14,7 @@ const validators = {
 const messages = {
 	displayName: {
 		valid: "Chinh xac!",
-		invalid: "Toi thieu 3 ky tu"
+		invalid: "Chi duoc chua chu cai va khoang trang"
 	},
 	email: {
 		valid: "Email hop le",
@@ -19,6 +23,10 @@ const messages = {
 	phone: {
 		valid: "So dien thoai hop le",
 		invalid: "So bat dau bang 0 va gom 10-11 so"
+	},
+	accountType: {
+		valid: "Loai tai khoan hop le",
+		invalid: "Vui long chon Khach hang hoac Nha to chuc"
 	},
 	username: {
 		valid: "Chinh xac!",
@@ -100,9 +108,9 @@ function validateAvatar(input, isSubmit = false) {
 			fileName.textContent = "Chua chon file";
 		}
 		if (group) {
-			setFieldState(group, isSubmit ? "invalid" : "idle", isSubmit ? "Vui long chon anh dai dien" : "");
+			setFieldState(group, "idle", "");
 		}
-		return !isSubmit;
+		return true;
 	}
 
 	if (fileName) {
@@ -122,14 +130,16 @@ document.addEventListener("DOMContentLoaded", () => {
 		return;
 	}
 
-	const inputs = form.querySelectorAll("input[type='text'], input[type='email'], input[type='tel'], input[type='password']");
+	const fields = form.querySelectorAll("input[type='text'], input[type='email'], input[type='tel'], input[type='password'], select[name='accountType']");
 	const avatarInput = document.getElementById("avatar");
 	const passwordToggles = form.querySelectorAll(".toggle-password");
 
-	inputs.forEach((input) => {
-		input.addEventListener("input", () => {
-			validateInput(input);
-			if (input.name === "password") {
+	fields.forEach((field) => {
+		const primaryEvent = field.tagName === "SELECT" ? "change" : "input";
+
+		field.addEventListener(primaryEvent, () => {
+			validateInput(field);
+			if (field.name === "password") {
 				const confirm = document.getElementById("confirmPassword");
 				if (confirm && confirm.value) {
 					validateInput(confirm);
@@ -137,7 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			}
 		});
 
-		input.addEventListener("blur", () => validateInput(input, true));
+		field.addEventListener("blur", () => validateInput(field, true));
 	});
 
 	if (avatarInput) {
@@ -162,12 +172,10 @@ document.addEventListener("DOMContentLoaded", () => {
 	});
 
 	form.addEventListener("submit", (event) => {
-		event.preventDefault();
-
 		let isFormValid = true;
 
-		inputs.forEach((input) => {
-			const valid = validateInput(input, true);
+		fields.forEach((field) => {
+			const valid = validateInput(field, true);
 			if (!valid) {
 				isFormValid = false;
 			}
@@ -177,8 +185,8 @@ document.addEventListener("DOMContentLoaded", () => {
 			isFormValid = false;
 		}
 
-		if (isFormValid) {
-			console.log("Sign up data is valid");
+		if (!isFormValid) {
+			event.preventDefault();
 		}
 	});
 });

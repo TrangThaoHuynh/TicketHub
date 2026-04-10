@@ -18,7 +18,26 @@ function togglePassword() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+	const FLASH_AUTO_HIDE_MS = 5000;
 	const inputs = document.querySelectorAll(".form-input");
+	const flashContainer = document.querySelector(".flash-messages");
+	const flashAlerts = flashContainer?.querySelectorAll(".alert") || [];
+
+	if (flashAlerts.length > 0) {
+		window.setTimeout(() => {
+			flashAlerts.forEach((alert) => {
+				alert.style.transition = "opacity 0.25s ease";
+				alert.style.opacity = "0";
+				window.setTimeout(() => alert.remove(), 260);
+			});
+
+			window.setTimeout(() => {
+				if (flashContainer && !flashContainer.querySelector(".alert")) {
+					flashContainer.remove();
+				}
+			}, 300);
+		}, FLASH_AUTO_HIDE_MS);
+	}
 
 	inputs.forEach((input) => {
 		const wrapper = input.parentElement;

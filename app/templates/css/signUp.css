@@ -112,7 +112,8 @@ body {
 	position: relative;
 }
 
-.input-shell input {
+.input-shell input,
+.input-shell select {
 	width: 100%;
 	height: 54px;
 	border: 2px solid var(--line);
@@ -121,9 +122,16 @@ body {
 	font-size: 1rem;
 	outline: none;
 	transition: all 0.25s ease;
+	background: #fff;
 }
 
-.input-shell input:focus {
+.input-shell select {
+	appearance: none;
+	cursor: pointer;
+}
+
+.input-shell input:focus,
+.input-shell select:focus {
 	border-color: #76a8eb;
 	box-shadow: 0 0 0 4px rgba(30, 111, 209, 0.12);
 }
@@ -159,7 +167,8 @@ body {
 	font-weight: 600;
 }
 
-.form-group.valid .input-shell input {
+.form-group.valid .input-shell input,
+.form-group.valid .input-shell select {
 	border-color: #8ad6a7;
 }
 
@@ -172,7 +181,8 @@ body {
 	color: #34a39a;
 }
 
-.form-group.invalid .input-shell input {
+.form-group.invalid .input-shell input,
+.form-group.invalid .input-shell select {
 	border-color: #fd7b72;
 }
 
@@ -274,6 +284,32 @@ body {
 	font-size: 1rem;
 }
 
+.flash-messages {
+	position: fixed;
+	top: 18px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 1060;
+	width: min(92%, 520px);
+}
+
+.flash-messages .alert {
+	margin-bottom: 10px;
+	border-radius: 14px;
+	border: none;
+	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.flash-messages .alert-danger {
+	background: rgba(239, 68, 68, 0.12);
+	color: #dc2626;
+}
+
+.flash-messages .alert-success {
+	background: rgba(16, 185, 129, 0.12);
+	color: #059669;
+}
+
 @media (max-width: 1200px) {
 	.grid-fields {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -302,7 +338,8 @@ body {
 		font-size: 1rem;
 	}
 
-	.input-shell input {
+	.input-shell input,
+	.input-shell select {
 		height: 56px;
 		font-size: 0.95rem;
 	}
