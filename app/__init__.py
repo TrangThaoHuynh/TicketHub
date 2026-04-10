@@ -1,7 +1,7 @@
 import os
 import cloudinary
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, app
 from flask_sqlalchemy import SQLAlchemy
 from .config import Config
 
@@ -28,11 +28,12 @@ def create_app():
     from .routes.event_routes import event_bp
     from .routes.login_routes import login_bp
     from .routes.main import main
+    from .routes.order import orders_bp
 
     app.register_blueprint(event_bp)
     app.register_blueprint(login_bp)
     app.register_blueprint(main)
-
+    app.register_blueprint(orders_bp)
     @app.context_processor
     def inject_header_event_types():
         try:
