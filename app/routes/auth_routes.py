@@ -14,6 +14,7 @@ from flask import (
 from flask_mail import Message
 
 from .. import mail, oauth
+from ..services.cloudinary_service import cloudinary_service
 from ..services import (
     authenticate_user,
     clear_verify_code,
@@ -238,6 +239,8 @@ def signup():
     form_data = {}
 
     if request.method == 'POST':
+        avatar_url = None
+
         form_data = {
             'displayName': request.form.get('displayName', '').strip(),
             'email': request.form.get('email', '').strip(),
@@ -245,6 +248,14 @@ def signup():
             'accountType': request.form.get('accountType', '').strip(),
             'username': request.form.get('username', '').strip(),
         }
+
+        avatar_file = request.files.get('avatar')
+        upload_result, upload_error = cloudinary_service.upload_avatar(avatar_file)
+        if upload_error:
+            flash(upload_error, 'danger')
+            return render_template('signUp.html', form_data=form_data), 400
+        if upload_result:
+            avatar_url = upload_result.get('url')
 
         user, error = create_user(
             {
@@ -255,6 +266,7 @@ def signup():
                 'username': form_data['username'],
                 'password': request.form.get('password', ''),
                 'confirmPassword': request.form.get('confirmPassword', ''),
+                'avatar': avatar_url,
             }
         )
 

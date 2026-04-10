@@ -33,7 +33,7 @@
 				<h1 id="signupTitle">Tạo tài khoản</h1>
 			</header>
 
-			<form id="signupForm" class="signup-form" method="POST" action="{{ url_for('login.signup') }}" novalidate>
+			<form id="signupForm" class="signup-form" method="POST" action="{{ url_for('login.signup') }}" enctype="multipart/form-data" novalidate>
 				<div class="grid-fields">
 					<div class="form-group" data-field="displayName">
 						<label for="displayName">Họ và tên/Tên tổ chức</label>

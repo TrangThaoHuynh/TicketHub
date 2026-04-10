@@ -1,8 +1,29 @@
+import os
+import cloudinary
 from flask import Flask
 from authlib.integrations.flask_client import OAuth
 from flask_mail import Mail
 from flask_sqlalchemy import SQLAlchemy
 from .config import Config
+
+# Configure Cloudinary if credentials exist in .env.
+cloudinary_url = os.getenv("CLOUDINARY_URL")
+cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME") or os.getenv("CLOUD_NAME")
+api_key = os.getenv("CLOUDINARY_API_KEY") or os.getenv("API_KEY")
+api_secret = os.getenv("CLOUDINARY_API_SECRET") or os.getenv("API_SECRET")
+
+if cloudinary_url:
+    cloudinary.config(
+        cloudinary_url=cloudinary_url,
+        secure=True,
+    )
+elif cloud_name and api_key and api_secret:
+    cloudinary.config(
+        cloud_name=cloud_name,
+        api_key=api_key,
+        api_secret=api_secret,
+        secure=True,
+    )
 
 db = SQLAlchemy()
 mail = Mail()
@@ -24,5 +45,13 @@ def create_app():
     app.register_blueprint(event_bp)
     app.register_blueprint(login_bp)
     app.register_blueprint(main)
+
+    @app.context_processor
+    def inject_header_event_types():
+        try:
+            from .services.event_service import get_event_types
+            return {"header_event_types": get_event_types(), "show_search": False}
+        except Exception:
+            return {"header_event_types": [], "show_search": False}
 
     return app
