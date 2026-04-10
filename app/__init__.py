@@ -1,32 +1,45 @@
 import os
 import cloudinary
-from dotenv import load_dotenv
 from flask import Flask
+from authlib.integrations.flask_client import OAuth
+from flask_mail import Mail
 from flask_sqlalchemy import SQLAlchemy
 from .config import Config
 
-#Load biến môi trường từ file .env
-load_dotenv()
+# Configure Cloudinary if credentials exist in .env.
+cloudinary_url = os.getenv("CLOUDINARY_URL")
+cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME") or os.getenv("CLOUD_NAME")
+api_key = os.getenv("CLOUDINARY_API_KEY") or os.getenv("API_KEY")
+api_secret = os.getenv("CLOUDINARY_API_SECRET") or os.getenv("API_SECRET")
 
-# cấu hình Cloudinary
-cloudinary.config(
-    cloud_name=os.getenv("CLOUD_NAME"),
-    api_key=os.getenv("API_KEY"),
-    api_secret=os.getenv("API_SECRET"),
-    secure=True
-)
+if cloudinary_url:
+    cloudinary.config(
+        cloudinary_url=cloudinary_url,
+        secure=True,
+    )
+elif cloud_name and api_key and api_secret:
+    cloudinary.config(
+        cloud_name=cloud_name,
+        api_key=api_key,
+        api_secret=api_secret,
+        secure=True,
+    )
 
 db = SQLAlchemy()
+mail = Mail()
+oauth = OAuth()
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
     db.init_app(app)
+    mail.init_app(app)
+    oauth.init_app(app)
 
     from . import models
     from .routes.event_routes import event_bp
-    from .routes.login_routes import login_bp
+    from .routes.auth_routes import login_bp
     from .routes.main import main
 
     app.register_blueprint(event_bp)

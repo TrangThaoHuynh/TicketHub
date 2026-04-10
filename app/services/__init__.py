@@ -3,4 +3,12 @@ from .ticket_type_service import create_ticket_type
 from .booking_service import create_booking
 from .payment_service import create_payment
 from .ticket_service import create_ticket
-from .user_service import create_user
+from .user_service import (
+	authenticate_user,
+	clear_verify_code,
+	create_user,
+	issue_verify_code,
+	login_or_create_google_user,
+	reset_password_by_user_id,
+	verify_forgot_password_code,
+)
