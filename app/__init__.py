@@ -33,4 +33,12 @@ def create_app():
     app.register_blueprint(login_bp)
     app.register_blueprint(main)
 
+    @app.context_processor
+    def inject_header_event_types():
+        try:
+            from .services.event_service import get_event_types
+            return {"header_event_types": get_event_types(), "show_search": False}
+        except Exception:
+            return {"header_event_types": [], "show_search": False}
+
     return app
