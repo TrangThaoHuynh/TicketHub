@@ -10,6 +10,17 @@
 </head>
 <body>
 	<div class="login-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-messages">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' }}" role="alert">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
     <!-- Background Shapes -->
     <div class="login-background">
         <div class="bg-shapes">
@@ -68,7 +79,7 @@
 
                     <div class="support-divider" aria-hidden="true"></div>
 
-                    <a href="#" class="google-login-btn">
+                    <a href="{{ url_for('login.login_google') }}" class="google-login-btn">
                         <i class="fab fa-google" aria-hidden="true"></i>
                         <span>Đăng nhập bằng tài khoản Google</span>
                     </a>

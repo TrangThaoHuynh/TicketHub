@@ -10,6 +10,18 @@
 </head>
 <body>
 	<main class="signup-page">
+		{% with messages = get_flashed_messages(with_categories=true) %}
+		{% if messages %}
+		<div class="flash-messages">
+			{% for category, message in messages %}
+			<div class="alert alert-{{ 'danger' if category == 'danger' else 'success' }}" role="alert">
+				{{ message }}
+			</div>
+			{% endfor %}
+		</div>
+		{% endif %}
+		{% endwith %}
+
 		<div class="signup-background" aria-hidden="true">
 			<span class="shape shape-a"></span>
 			<span class="shape shape-b"></span>
@@ -21,12 +33,12 @@
 				<h1 id="signupTitle">Tạo tài khoản</h1>
 			</header>
 
-			<form id="signupForm" class="signup-form" novalidate>
+			<form id="signupForm" class="signup-form" method="POST" action="{{ url_for('login.signup') }}" enctype="multipart/form-data" novalidate>
 				<div class="grid-fields">
 					<div class="form-group" data-field="displayName">
 						<label for="displayName">Họ và tên/Tên tổ chức</label>
 						<div class="input-shell">
-							<input type="text" id="displayName" name="displayName" placeholder="Nguyễn Văn A" required>
+							<input type="text" id="displayName" name="displayName" placeholder="Nguyễn Văn A" value="{{ form_data.displayName if form_data else '' }}" required>
 							<i class="status-icon fas"></i>
 						</div>
 						<small class="status-text" aria-live="polite"></small>
@@ -35,7 +47,7 @@
 					<div class="form-group" data-field="email">
 						<label for="email">Email</label>
 						<div class="input-shell">
-							<input type="email" id="email" name="email" placeholder="name@example.com" required>
+							<input type="email" id="email" name="email" placeholder="name@example.com" value="{{ form_data.email if form_data else '' }}" required>
 							<i class="status-icon fas"></i>
 						</div>
 						<small class="status-text" aria-live="polite"></small>
@@ -44,7 +56,20 @@
 					<div class="form-group" data-field="phone">
 						<label for="phone">Số điện thoại</label>
 						<div class="input-shell">
-							<input type="tel" id="phone" name="phone" placeholder="0901234567" required>
+							<input type="tel" id="phone" name="phone" placeholder="0901234567" value="{{ form_data.phone if form_data else '' }}" required>
+							<i class="status-icon fas"></i>
+						</div>
+						<small class="status-text" aria-live="polite"></small>
+					</div>
+
+					<div class="form-group" data-field="accountType">
+						<label for="accountType">Loại tài khoản</label>
+						<div class="input-shell">
+							<select id="accountType" name="accountType" required>
+								<option value="">Chọn loại tài khoản</option>
+								<option value="customer" {% if form_data and form_data.accountType == 'customer' %}selected{% endif %}>Khách hàng</option>
+								<option value="organizer" {% if form_data and form_data.accountType == 'organizer' %}selected{% endif %}>Nhà tổ chức</option>
+							</select>
 							<i class="status-icon fas"></i>
 						</div>
 						<small class="status-text" aria-live="polite"></small>
@@ -53,7 +78,7 @@
 					<div class="form-group" data-field="username">
 						<label for="username">Tài khoản</label>
 						<div class="input-shell">
-							<input type="text" id="username" name="username" placeholder="user1" required>
+							<input type="text" id="username" name="username" placeholder="user1" value="{{ form_data.username if form_data else '' }}" required>
 							<i class="status-icon fas"></i>
 						</div>
 						<small class="status-text" aria-live="polite"></small>

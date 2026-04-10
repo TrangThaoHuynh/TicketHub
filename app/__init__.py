@@ -1,32 +1,50 @@
 import os
 import cloudinary
 from dotenv import load_dotenv
-from flask import Flask, app
+from flask import Flask
+from authlib.integrations.flask_client import OAuth
+from flask_mail import Mail
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
 from .config import Config
 
-#Load biến môi trường từ file .env
+# Load biến môi trường
 load_dotenv()
 
-# cấu hình Cloudinary
-cloudinary.config(
-    cloud_name=os.getenv("CLOUD_NAME"),
-    api_key=os.getenv("API_KEY"),
-    api_secret=os.getenv("API_SECRET"),
-    secure=True
-)
+# Configure Cloudinary
+cloudinary_url = os.getenv("CLOUDINARY_URL")
+cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME") or os.getenv("CLOUD_NAME")
+api_key = os.getenv("CLOUDINARY_API_KEY") or os.getenv("API_KEY")
+api_secret = os.getenv("CLOUDINARY_API_SECRET") or os.getenv("API_SECRET")
+
+if cloudinary_url:
+    cloudinary.config(cloudinary_url=cloudinary_url, secure=True)
+elif cloud_name and api_key and api_secret:
+    cloudinary.config(cloud_name=cloud_name, api_key=api_key, api_secret=api_secret, secure=True)
 
 db = SQLAlchemy()
+mail = Mail()
+oauth = OAuth()
+login_manager = LoginManager()
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
     db.init_app(app)
-
+    mail.init_app(app)
+    oauth.init_app(app)
+    login_manager.init_app(app) 
+    login_manager.login_view = 'login.login'
+    
+    @login_manager.user_loader
+    def load_user(user_id: str):
+        from .models.user import User
+        return User.query.get(int(user_id))
+    
     from . import models
     from .routes.event_routes import event_bp
-    from .routes.login_routes import login_bp
+    from .routes.auth_routes import login_bp
     from .routes.main import main
     from .routes.order import orders_bp
 
@@ -34,6 +52,7 @@ def create_app():
     app.register_blueprint(login_bp)
     app.register_blueprint(main)
     app.register_blueprint(orders_bp)
+    
     @app.context_processor
     def inject_header_event_types():
         try:
