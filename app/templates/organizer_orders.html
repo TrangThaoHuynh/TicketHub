@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/organizer_orders.css') }}">
+<div class="orders-page">
+    <div class="container">
+        <div class="orders-card" aria-label="Quản lý đơn mua">
+            <div class="orders-card__header">
+                <div>
+                    <h1 class="orders-title">Quản lý đơn mua</h1>
+                    <p class="orders-subtitle">
+                        Sự kiện:
+                        <strong>
+                            {{ event.title if event is defined and event else 'Tên sự kiện' }}
+                        </strong>
+                    </p>
+                </div>
+            </div>
+
+            <div class="orders-toolbar" role="region" aria-label="Bộ lọc đơn mua">
+                <div class="orders-toolbar__row">
+                    <div class="orders-toolbar__field">
+                        <label for="orderCode">Mã đơn:</label>
+                        <input id="orderCode" class="orders-input" type="text" placeholder="Nhập mã đơn..."
+                            autocomplete="off" />
+                    </div>
+
+                    <div class="orders-toolbar__field">
+                        <label for="orderStatus" class="visually-hidden">Trạng thái</label>
+                        <select id="orderStatus" class="orders-select" aria-label="Trạng thái">
+                            <option value="">Trạng thái</option>
+                            <option value="paid">Đã thanh toán</option>
+                            <option value="unpaid">Chưa thanh toán</option>
+                        </select>
+                    </div>
+
+                    <div class="orders-toolbar__actions">
+                        <button type="button" class="orders-btn" id="btnFilter">Lọc</button>
+                        <button type="button" class="orders-btn" id="btnClear">Bỏ lọc</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="orders-table-wrap">
+                <table class="orders-table" aria-label="Danh sách đơn mua" id="ordersTable">
+                    <thead>
+                        <tr>
+                            <th>Mã đơn</th>
+                            <th>Khách hàng</th>
+                            <th>Số điện thoại</th>
+                            <th>Email</th>
+                            <th>Số vé</th>
+                            <th>Tổng tiền</th>
+                            <th>Trạng thái</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTbody">
+                        {% if orders is defined and orders %}
+                        {% for o in orders %}
+                        {% set status_value = (o.status or '')|lower %}
+                        <tr class="js-order-row" data-order-code="{{ o.code or o.id }}"
+                            data-status="{{ 'paid' if status_value in ['paid', 'success', 'completed', 'done'] else 'unpaid' }}">
+                            <td>{{ o.code or o.id }}</td>
+                            <td>{{ o.customer_name or '—' }}</td>
+                            <td>{{ o.customer_phone or '—' }}</td>
+                            <td>{{ o.customer_email or '—' }}</td>
+                            <td>{{ o.ticket_count or 0 }}</td>
+                            <td>
+                                {% if o.total_amount is not none %}
+                                {{ "{:,.0f}".format(o.total_amount).replace(',', '.') }} đ
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if status_value in ['paid', 'success', 'completed', 'done'] %}
+                                <span class="orders-status orders-status--paid">Đã thanh toán</span>
+                                {% else %}
+                                <span class="orders-status orders-status--unpaid">Chưa thanh toán</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a class="orders-action" href="#" data-order-id="{{ o.id }}">Xem chi tiết</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr class="js-order-row" data-order-code="DH001" data-status="paid">
+                            <td>DH001</td>
+                            <td>Nguyễn Văn A</td>
+                            <td>0934719411</td>
+                            <td>ABC11@gmail.com</td>
+                            <td>2</td>
+                            <td>2.000.000 đ</td>
+                            <td><span class="orders-status orders-status--paid">Đã thanh toán</span></td>
+                            <td><a class="orders-action" href="#" data-order-id="DH001">Xem chi tiết</a></td>
+                        </tr>
+                        <tr class="js-order-row" data-order-code="DH002" data-status="unpaid">
+                            <td>DH002</td>
+                            <td>Nguyễn Văn B</td>
+                            <td>0734716222</td>
+                            <td>AAB11@gmail.com</td>
+                            <td>3</td>
+                            <td>3.000.000 đ</td>
+                            <td><span class="orders-status orders-status--unpaid">Chưa thanh toán</span></td>
+                            <td><a class="orders-action" href="#" data-order-id="DH002">Xem chi tiết</a></td>
+                        </tr>
+                        <tr class="js-order-row" data-order-code="DH003" data-status="paid">
+                            <td>DH003</td>
+                            <td>Nguyễn Văn C</td>
+                            <td>0734462322</td>
+                            <td>AAC11@gmail.com</td>
+                            <td>3</td>
+                            <td>3.000.000 đ</td>
+                            <td><span class="orders-status orders-status--paid">Đã thanh toán</span></td>
+                            <td><a class="orders-action" href="#" data-order-id="DH003">Xem chi tiết</a></td>
+                        </tr>
+                        <tr class="js-order-row" data-order-code="DH004" data-status="unpaid">
+                            <td>DH004</td>
+                            <td>Trần Thị D</td>
+                            <td>0912345678</td>
+                            <td>ddd@gmail.com</td>
+                            <td>1</td>
+                            <td>500.000 đ</td>
+                            <td><span class="orders-status orders-status--unpaid">Chưa thanh toán</span></td>
+                            <td><a class="orders-action" href="#" data-order-id="DH004">Xem chi tiết</a></td>
+                        </tr>
+                        <tr class="js-order-row" data-order-code="DH005" data-status="paid">
+                            <td>DH005</td>
+                            <td>Lê Văn E</td>
+                            <td>0987654321</td>
+                            <td>eee@gmail.com</td>
+                            <td>4</td>
+                            <td>4.000.000 đ</td>
+                            <td><span class="orders-status orders-status--paid">Đã thanh toán</span></td>
+                            <td><a class="orders-action" href="#" data-order-id="DH005">Xem chi tiết</a></td>
+                        </tr>
+                        <tr class="js-order-row" data-order-code="DH006" data-status="unpaid">
+                            <td>DH006</td>
+                            <td>Phạm Thị F</td>
+                            <td>0900000000</td>
+                            <td>fff@gmail.com</td>
+                            <td>2</td>
+                            <td>1.200.000 đ</td>
+                            <td><span class="orders-status orders-status--unpaid">Chưa thanh toán</span></td>
+                            <td><a class="orders-action" href="#" data-order-id="DH006">Xem chi tiết</a></td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="orders-footer">
+                <div class="orders-pagination" aria-label="Phân trang">
+                    <button class="orders-page-btn" id="pagePrev" type="button" aria-label="Trang trước">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <div id="pageButtons" style="display: inline-flex; gap: 6px;"></div>
+                    <button class="orders-page-btn" id="pageNext" type="button" aria-label="Trang sau">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="{{ url_for('static', filename='js/organizer_orders.js') }}"></script>
+
+{% endblock %}

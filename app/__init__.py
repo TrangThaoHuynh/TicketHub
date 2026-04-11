@@ -45,10 +45,12 @@ def create_app():
     from .routes.event_routes import event_bp
     from .routes.auth_routes import login_bp
     from .routes.main import main
+    from .routes.organizer_orders import organizer_bp
 
     app.register_blueprint(event_bp)
     app.register_blueprint(login_bp)
     app.register_blueprint(main)
+    app.register_blueprint(organizer_bp)
 
     @app.context_processor
     def inject_header_event_types():
