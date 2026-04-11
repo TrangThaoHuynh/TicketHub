@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="py-4">
+  <div class="container" style="max-width: 880px;">
+    <a href="{{ url_for('order.my_tickets') }}" class="text-decoration-none">
+      <i class="fa-solid fa-arrow-left me-2"></i>Quay lại "Vé của tôi"
+    </a>
+
+    <div class="card mt-3">
+      <div class="card-body">
+        <!-- Header: Tên event + Trạng thái -->
+        <div class="d-flex align-items-start justify-content-between mb-2">
+          <h3 class="mb-0 text-uppercase fw-bold" style="font-size: 1.5rem;">{{ t.event.name }}</h3>
+          <span class="badge {{ 'bg-success' if t.status.name=='ACTIVE'
+                                else 'bg-secondary' if t.status.name=='USED'
+                                else 'bg-danger' if t.status.name=='CANCELLED'
+                                else 'bg-warning' }}" style="font-size: 0.85rem; padding: 0.5rem 0.75rem;">{{ t.status.name }}</span>
+        </div>
+
+        <!-- Thông tin Event -->
+        <div class="small text-muted mb-3">
+          <i class="fa-regular fa-clock me-1"></i>
+          {{ t.event.start_datetime.strftime('%d/%m/%Y %H:%M') if t.event.start_datetime }}
+          <span class="mx-2">•</span>
+          <i class="fa-solid fa-location-dot me-1"></i>{{ t.event.address }}
+        </div>
+
+        <hr class="my-3">
+
+        <!-- Main Content -->
+        <div class="row g-5">
+          <!-- Thông tin vé -->
+          <div class="col-md-7">
+            <!-- MÃ VÉ -->
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div>
+                <div class="text-uppercase small text-muted mb-1">Mã vé</div>
+                <div class="fw-bold" style="font-size: 1.1rem;">{{ t.ticket_code }}</div>
+              </div>
+            </div>
+
+            <!-- LOẠI VÉ & GIÁ -->
+            <div class="mb-3">
+              <div class="text-uppercase small text-muted mb-1">Loại vé</div>
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="fw-semibold" style="font-size: 1rem;">{{ t.ticket_type.name }}</div>
+                <div class="text-muted" style="font-size: 0.95rem;">{{ "{:,.0f}".format(t.ticket_type.price or 0) }} VNĐ</div>
+              </div>
+            </div>
+
+            <!-- HỌ VÀ TÊN (Customer) -->
+            {% if t.order and t.order.customer %}
+            <div class="mb-3">
+              <div class="text-uppercase small text-muted mb-1">Họ và tên</div>
+              <div class="fw-semibold">{{ t.order.customer.first_name }} {{ t.order.customer.last_name }}</div>
+            </div>
+
+            <!-- SĐT (Phone) -->
+            <div class="mb-3">
+              <div class="text-uppercase small text-muted mb-1">SĐT</div>
+              <div class="fw-semibold">{{ t.order.customer.phone }}</div>
+            </div>
+            {% endif %}
+
+            <!-- Phát hành -->
+            {% if t.issued_at %}
+            <div class="small text-muted">
+              Phát hành: {{ t.issued_at.strftime('%d/%m/%Y %H:%M') }} UTC
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- QR Code -->
+          <div class="col-md-5 text-center">
+            <img src="{{ url_for('order.ticket_qr_image', ticket_id=t.id) }}"
+                 alt="QR Ticket"
+                 class="img-fluid"
+                 style="max-width: 240px; border: 6px solid #f5f7ff; border-radius: 8px;">
+            <div class="small text-muted mt-3">Quét QR này tại cổng để sử dụng vé</div>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- Hướng dẫn sử dụng -->
+        <div class="mb-3">
+          <div class="fw-semibold mb-2">Hướng dẫn sử dụng</div>
+          <ol class="mb-0 small ps-4">
+            <li>Mở trang này và đưa mã QR cho nhân viên quét.</li>
+            <li>Giữ mã vé và giấy tờ tùy thân để đối chiếu khi cần.</li>
+          </ol>
+        </div>
+        <div class="d-flex gap-2">
+          <a class="btn btn-outline-primary" href="{{ url_for('event.event_details', event_id=t.event.id) }}">
+            Xem sự kiện
+          </a>
+          {% if t.status.name=='ACTIVE' %}
+          <a class="btn btn-primary" href="{{ url_for('event.event_details', event_id=t.event.id) }}#use">
+            Quy định sử dụng
+          </a>
+          {% endif %}
+        </div>
+        {% if t.status.name != 'ACTIVE' %}
+        <div class="alert alert-warning mt-4 mb-0">
+          Lưu ý: Vé ở trạng thái <b>{{ t.status.name }}</b>, có thể không sử dụng được.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
