@@ -155,6 +155,10 @@
         font-size: 14px;
     }
 
+    a {
+        text-decoration: none;
+    }
+
     @media (max-width: 1199.98px) {
         .events-grid {
             grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -207,42 +211,44 @@
             {% if events and events|length > 0 %}
             <div class="events-grid" aria-label="Danh sách sự kiện">
                 {% for e in events %}
-                <article class="event-card">
-                    <div class="event-card__media">
-                        {% if e.image %}
-                        <img src="{{ e.image }}" alt="{{ e.title or 'Sự kiện' }}" loading="lazy" />
-                        {% else %}
-                        <div class="event-card__placeholder" aria-hidden="true">
-                            <i class="fa-solid fa-ticket"></i>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="event-card__body">
-                        <h3 class="event-card__title">{{ e.title or 'Chưa có tiêu đề' }}</h3>
-
-                        <div class="event-card__meta">
-                            <span class="event-card__price">
-                                {% if e.min_price is not none %}
-                                Từ {{ "{:,.0f}".format(e.min_price).replace(',', '.') }}đ
-                                {% else %}
-                                Chưa có giá
-                                {% endif %}
-                            </span>
+                <a class="event-card" href="{{ url_for('event.event_details', event_id=e.id) }}">
+                    <article>
+                        <div class="event-card__media">
+                            {% if e.image %}
+                            <img src="{{ e.image }}" alt="{{ e.title or 'Sự kiện' }}" loading="lazy" />
+                            {% else %}
+                            <div class="event-card__placeholder" aria-hidden="true">
+                                <i class="fa-solid fa-ticket"></i>
+                            </div>
+                            {% endif %}
                         </div>
 
-                        <div class="event-card__meta">
-                            <i class="fa-regular fa-calendar"></i>
-                            <span>
-                                {% if e.startTime %}
-                                {{ e.startTime.strftime('%d-%m-%Y') }}
-                                {% else %}
-                                Chưa có ngày
-                                {% endif %}
-                            </span>
+                        <div class="event-card__body">
+                            <h3 class="event-card__title">{{ e.title or 'Chưa có tiêu đề' }}</h3>
+
+                            <div class="event-card__meta">
+                                <span class="event-card__price">
+                                    {% if e.min_price is not none %}
+                                    Từ {{ "{:,.0f}".format(e.min_price).replace(',', '.') }}đ
+                                    {% else %}
+                                    Chưa có giá
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            <div class="event-card__meta">
+                                <i class="fa-regular fa-calendar"></i>
+                                <span>
+                                    {% if e.startTime %}
+                                    {{ e.startTime.strftime('%d-%m-%Y') }}
+                                    {% else %}
+                                    Chưa có ngày
+                                    {% endif %}
+                                </span>
+                            </div>
                         </div>
-                    </div>
-                </article>
+                    </article>
+                </a>
                 {% endfor %}
             </div>
             {% else %}

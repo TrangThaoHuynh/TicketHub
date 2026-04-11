@@ -5,7 +5,11 @@ from authlib.integrations.flask_client import OAuth
 from flask_mail import Mail
 from flask_sqlalchemy import SQLAlchemy
 from .config import Config
+from flask import session
+import os
+from dotenv import load_dotenv   
 
+load_dotenv() 
 # Configure Cloudinary if credentials exist in .env.
 cloudinary_url = os.getenv("CLOUDINARY_URL")
 cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME") or os.getenv("CLOUD_NAME")
@@ -53,5 +57,14 @@ def create_app():
             return {"header_event_types": get_event_types(), "show_search": False}
         except Exception:
             return {"header_event_types": [], "show_search": False}
+        
+    @app.context_processor
+    def inject_user():
+        from .models.user import User
+        
+        user = None
+        if 'user_id' in session:
+            user = User.query.get(session['user_id'])
+        return dict(current_user=user)
 
     return app
