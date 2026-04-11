@@ -7,10 +7,11 @@ from flask_mail import Mail
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from .config import Config
-from dotenv import load_dotenv  
+from flask import session
 
 # Load biến môi trường
 load_dotenv()
+
 # Configure Cloudinary
 cloudinary_url = os.getenv("CLOUDINARY_URL")
 cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME") or os.getenv("CLOUD_NAME")
@@ -60,5 +61,14 @@ def create_app():
             return {"header_event_types": get_event_types(), "show_search": False}
         except Exception:
             return {"header_event_types": [], "show_search": False}
+        
+    @app.context_processor
+    def inject_user():
+        from .models.user import User
+        
+        user = None
+        if 'user_id' in session:
+            user = User.query.get(session['user_id'])
+        return dict(current_user=user)
 
     return app

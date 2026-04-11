@@ -364,3 +364,9 @@ def reset_forgot_password():
         redirect=url_for('login.login'),
         username=user.username,
     )
+
+@login_bp.route('/logout')
+def logout():
+    session.clear()
+    flash('Đã đăng xuất.', 'success')
+    return redirect(url_for('main.index'))
