@@ -1,12 +1,3 @@
-<style>
-  .dropdown-menu .dropdown-item {
-    color: #000 !important;
-  }
-
-  .dropdown-menu .dropdown-item:hover {
-    color: #000 !important;
-  }
-</style>
 <header class="ticket-header">
   <div class="container">
     <div class="ticket-header__inner">
@@ -130,7 +121,7 @@
             data-bs-toggle="dropdown" aria-expanded="false">
 
             <img src="{{ current_user.avatar or 'https://via.placeholder.com/32' }}" alt="Avatar"
-              style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
+              class="ticket-avatar" />
 
             <span>{{ current_user.name or current_user.username }}</span>
           </a>
@@ -274,57 +265,3 @@
     {% endif %}
   </div>
 </header>
-
-{% if show_search %}
-<script>
-  (function () {
-    function setupFilterDropdown(buttonId, panelId) {
-      const btn = document.getElementById(buttonId);
-      const panel = document.getElementById(panelId);
-      if (!btn || !panel) return;
-
-      function close() {
-        panel.classList.add("is-hidden");
-        btn.setAttribute("aria-expanded", "false");
-      }
-
-      function open() {
-        panel.classList.remove("is-hidden");
-        btn.setAttribute("aria-expanded", "true");
-      }
-
-      btn.addEventListener("click", function (e) {
-        e.preventDefault();
-        const isHidden = panel.classList.contains("is-hidden");
-        if (isHidden) open();
-        else close();
-      });
-
-      panel.addEventListener("click", function (e) {
-        const closeBtn = e.target.closest(".js-ticket-filter-close");
-        if (closeBtn) {
-          e.preventDefault();
-          close();
-        }
-      });
-
-      document.addEventListener("click", function (e) {
-        if (panel.classList.contains("is-hidden")) return;
-        if (btn.contains(e.target) || panel.contains(e.target)) return;
-        close();
-      });
-
-      document.addEventListener("keydown", function (e) {
-        if (e.key !== "Escape") return;
-        if (panel.classList.contains("is-hidden")) return;
-        close();
-      });
-    }
-
-    document.addEventListener("DOMContentLoaded", function () {
-      setupFilterDropdown("ticketFilterBtnDesktop", "ticketFilterPanelDesktop");
-      setupFilterDropdown("ticketFilterBtnMobile", "ticketFilterPanelMobile");
-    });
-  })();
-</script>
-{% endif %}

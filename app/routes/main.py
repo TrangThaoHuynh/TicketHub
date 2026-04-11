@@ -1,7 +1,12 @@
 from flask import Blueprint, render_template, request
 from ..services.event_service import get_event_types, get_home_events
 
-main = Blueprint('main', __name__)
+main = Blueprint(
+    'main',
+    __name__,
+    static_folder='../templates',
+    static_url_path='/main-assets'
+)
 
 @main.route('/')
 def index():
