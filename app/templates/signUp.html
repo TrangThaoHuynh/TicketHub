@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Tạo tài khoản</title>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+	<link rel="stylesheet" href="{{ url_for('login.static', filename='css/signUp.css') }}">
+</head>
+<body>
+	<main class="signup-page">
+		{% with messages = get_flashed_messages(with_categories=true) %}
+		{% if messages %}
+		<div class="flash-messages">
+			{% for category, message in messages %}
+			<div class="alert alert-{{ 'danger' if category == 'danger' else 'success' }}" role="alert">
+				{{ message }}
+			</div>
+			{% endfor %}
+		</div>
+		{% endif %}
+		{% endwith %}
+
+		<div class="signup-background" aria-hidden="true">
+			<span class="shape shape-a"></span>
+			<span class="shape shape-b"></span>
+			<span class="shape shape-c"></span>
+		</div>
+
+		<section class="signup-card" aria-labelledby="signupTitle">
+			<header class="signup-header">
+				<h1 id="signupTitle">Tạo tài khoản</h1>
+			</header>
+
+			<form id="signupForm" class="signup-form" method="POST" action="{{ url_for('login.signup') }}" enctype="multipart/form-data" novalidate>
+				<div class="grid-fields">
+					<div class="form-group" data-field="displayName">
+						<label for="displayName">Họ và tên/Tên tổ chức</label>
+						<div class="input-shell">
+							<input type="text" id="displayName" name="displayName" placeholder="Nguyễn Văn A" value="{{ form_data.displayName if form_data else '' }}" required>
+							<i class="status-icon fas"></i>
+						</div>
+						<small class="status-text" aria-live="polite"></small>
+					</div>
+
+					<div class="form-group" data-field="email">
+						<label for="email">Email</label>
+						<div class="input-shell">
+							<input type="email" id="email" name="email" placeholder="name@example.com" value="{{ form_data.email if form_data else '' }}" required>
+							<i class="status-icon fas"></i>
+						</div>
+						<small class="status-text" aria-live="polite"></small>
+					</div>
+
+					<div class="form-group" data-field="phone">
+						<label for="phone">Số điện thoại</label>
+						<div class="input-shell">
+							<input type="tel" id="phone" name="phone" placeholder="0901234567" value="{{ form_data.phone if form_data else '' }}" required>
+							<i class="status-icon fas"></i>
+						</div>
+						<small class="status-text" aria-live="polite"></small>
+					</div>
+
+					<div class="form-group" data-field="accountType">
+						<label for="accountType">Loại tài khoản</label>
+						<div class="input-shell">
+							<select id="accountType" name="accountType" required>
+								<option value="">Chọn loại tài khoản</option>
+								<option value="customer" {% if form_data and form_data.accountType == 'customer' %}selected{% endif %}>Khách hàng</option>
+								<option value="organizer" {% if form_data and form_data.accountType == 'organizer' %}selected{% endif %}>Nhà tổ chức</option>
+							</select>
+							<i class="status-icon fas"></i>
+						</div>
+						<small class="status-text" aria-live="polite"></small>
+					</div>
+
+					<div class="form-group" data-field="username">
+						<label for="username">Tài khoản</label>
+						<div class="input-shell">
+							<input type="text" id="username" name="username" placeholder="user1" value="{{ form_data.username if form_data else '' }}" required>
+							<i class="status-icon fas"></i>
+						</div>
+						<small class="status-text" aria-live="polite"></small>
+					</div>
+
+					<div class="form-group" data-field="password">
+						<label for="password">Mật khẩu</label>
+						<div class="input-shell">
+							<input type="password" id="password" name="password" placeholder="" required>
+							<button type="button" class="toggle-password" aria-label="Hiện mật khẩu">
+								<i class="fas fa-eye"></i>
+							</button>
+							<i class="status-icon fas"></i>
+						</div>
+						<small class="status-text" aria-live="polite"></small>
+					</div>
+
+					<div class="form-group" data-field="confirmPassword">
+						<label for="confirmPassword">Nhập lại mật khẩu</label>
+						<div class="input-shell">
+							<input type="password" id="confirmPassword" name="confirmPassword" placeholder="" required>
+							<button type="button" class="toggle-password" aria-label="Hiện mật khẩu">
+								<i class="fas fa-eye"></i>
+							</button>
+							<i class="status-icon fas"></i>
+						</div>
+						<small class="status-text" aria-live="polite"></small>
+					</div>
+
+					<div class="form-group avatar-group" data-field="avatar">
+						<label for="avatar">Ảnh đại diện</label>
+						<div class="upload-shell">
+							<input type="file" id="avatar" name="avatar" accept="image/*">
+							<span class="file-name" id="fileName">Chưa chọn file</span>
+						</div>
+						<small class="status-text" aria-live="polite"></small>
+					</div>
+				</div>
+
+				<div class="action-row">
+					<a href="{{ url_for('login.login') }}" class="btn-back-login">
+						<i class="fas fa-arrow-left" aria-hidden="true"></i>
+						<span>Quay lại đăng nhập</span>
+					</a>
+					<button type="submit" class="btn-signup">
+						<span>Đăng ký</span>
+						<i class="fas fa-file-signature" aria-hidden="true"></i>
+					</button>
+				</div>
+			</form>
+		</section>
+	</main>
+
+	<script src="{{ url_for('login.static', filename='js/signUp.js') }}"></script>
+</body>
+</html>
