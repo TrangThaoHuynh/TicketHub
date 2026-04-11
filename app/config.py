@@ -43,6 +43,7 @@ class Config:
 
     SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI", "mysql+pymysql://root:123456@localhost/ticketdb")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    DB_AUTO_INIT = _env_bool("DB_AUTO_INIT", True)
 
     MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
     MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
