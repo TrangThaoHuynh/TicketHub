@@ -12,13 +12,15 @@ from flask import (
     url_for,
 )
 from flask_mail import Message
-
+from flask_login import login_user
 from .. import mail, oauth
 from ..services.cloudinary_service import cloudinary_service
 from ..services import (
+    assign_user_role,
     authenticate_user,
     clear_verify_code,
     create_user,
+    get_user_role,
     issue_verify_code,
     login_or_create_google_user,
     reset_password_by_user_id,
@@ -35,6 +37,7 @@ login_bp = Blueprint(
 FORGOT_PASSWORD_SESSION_KEY = 'forgot_password_user_id'
 FORGOT_PASSWORD_SUBJECT = 'Ma xac nhan dat lai mat khau TicketHub'
 GOOGLE_OAUTH_SCOPE = 'openid email profile'
+GOOGLE_ROLE_SESSION_KEY = 'google_role_user_id'
 
 
 def _request_payload():
@@ -179,7 +182,7 @@ def login_google_callback():
         token = google.authorize_access_token()
     except Exception:
         current_app.logger.exception('Failed to exchange Google OAuth token')
-        flash('Khong the xac thuc voi Google. Vui long thu lai.', 'danger')
+        flash('Không thể xác thực với Google. Vui lòng thử lại.', 'danger')
         return redirect(url_for('login.login'))
 
     user_info = token.get('userinfo') if isinstance(token, dict) else None
@@ -195,15 +198,15 @@ def login_google_callback():
             user_info = user_info_response.json()
         except Exception:
             current_app.logger.exception('Failed to fetch Google user profile')
-            flash('Khong lay duoc thong tin tai khoan Google.', 'danger')
+            flash('Không lấy được thông tin tài khoản Google.', 'danger')
             return redirect(url_for('login.login'))
 
     if not isinstance(user_info, dict):
-        flash('Thong tin Google tra ve khong hop le.', 'danger')
+        flash('Thông tin Google trả về không hợp lệ.', 'danger')
         return redirect(url_for('login.login'))
 
     if user_info.get('email_verified') is False:
-        flash('Email Google chua duoc xac minh.', 'danger')
+        flash('Email Google chưa được xác minh.', 'danger')
         return redirect(url_for('login.login'))
 
     user, error = login_or_create_google_user(user_info)
@@ -213,8 +216,50 @@ def login_google_callback():
 
     session['user_id'] = user.id
     session['username'] = user.username
-    flash('Dang nhap Google thanh cong.', 'success')
+
+    role = get_user_role(user.id)
+    if role is None:
+        session[GOOGLE_ROLE_SESSION_KEY] = user.id
+        flash('Đăng nhập Google thành công. Vui lòng chọn vai trò sử dụng.', 'success')
+        return redirect(url_for('login.google_choose_role'))
+
+    session.pop(GOOGLE_ROLE_SESSION_KEY, None)
+    flash('Đăng nhập Google thành công.', 'success')
     return redirect(url_for('main.index'))
+
+
+@login_bp.route('/login/google/choose-role', methods=['GET', 'POST'])
+def google_choose_role():
+    pending_user_id = session.get(GOOGLE_ROLE_SESSION_KEY)
+    current_user_id = session.get('user_id')
+
+    if not pending_user_id or not current_user_id or pending_user_id != current_user_id:
+        session.pop(GOOGLE_ROLE_SESSION_KEY, None)
+        flash('Phiên chọn vai trò đã hết hạn. Vui lòng đăng nhập Google lại.', 'danger')
+        return redirect(url_for('login.login'))
+
+    existing_role = get_user_role(pending_user_id)
+    if existing_role:
+        session.pop(GOOGLE_ROLE_SESSION_KEY, None)
+        flash('Tài khoản đã có vai trò sử dụng.', 'success')
+        return redirect(url_for('main.index'))
+
+    if request.method == 'POST':
+        selected_role = (request.form.get('role') or '').strip().lower()
+        assigned_role, error = assign_user_role(pending_user_id, selected_role)
+        if error:
+            flash(error, 'danger')
+            return render_template('Google_choose_role.html', selected_role=selected_role), 400
+
+        session.pop(GOOGLE_ROLE_SESSION_KEY, None)
+        if assigned_role == 'organizer':
+            flash('Bạn đã đăng ký vai trò Người tổ chức. Tài khoản sẽ ở trạng thái chờ duyệt.', 'success')
+        else:
+            flash('Bạn đã đăng ký vai trò Khách hàng thành công.', 'success')
+
+        return redirect(url_for('main.index'))
+
+    return render_template('Google_choose_role.html')
 
 @login_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -227,9 +272,10 @@ def login():
             flash(error, 'danger')
             return render_template('login.html'), 401
 
+        login_user(user)
         session['user_id'] = user.id
         session['username'] = user.username
-        flash('Dang nhap thanh cong.', 'success')
+        flash('Đăng nhập thành công.', 'success')
         return redirect(url_for('main.index'))
 
     return render_template('login.html')
@@ -274,7 +320,7 @@ def signup():
             flash(error, 'danger')
             return render_template('signUp.html', form_data=form_data), 400
 
-        flash('Dang ky thanh cong. Vui long dang nhap.', 'success')
+        flash('Đăng ký thành công. Vui lòng đăng nhập.', 'success')
         return redirect(url_for('login.login'))
 
     return render_template('signUp.html', form_data=form_data)
@@ -305,9 +351,9 @@ def request_forgot_password_code():
                 recipients=[user.email],
                 sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
                 body=(
-                    f'Xin chao {user.name or user.username},\n\n'
-                    f'Ma xac nhan cua ban la: {code}\n\n'
-                    'Nhap ma nay de xac nhan yeu cau doi mat khau.'
+                    f'Xin chào {user.name or user.username},\n\n'
+                    f'Mã xác nhận của bạn là: {code}\n\n'
+                    'Nhập mã này để xác nhận yêu cầu đổi mật khẩu.'
                 ),
             )
         )
@@ -316,18 +362,18 @@ def request_forgot_password_code():
         return _json_error(_build_smtp_auth_error_message(exc), 500)
     except (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected):
         clear_verify_code(user.id)
-        return _json_error('Khong ket noi duoc may chu SMTP. Vui long kiem tra MAIL_SERVER/MAIL_PORT.', 500)
+        return _json_error('Không kết nối được máy chủ SMTP. Vui lòng kiểm tra MAIL_SERVER/MAIL_PORT.', 500)
     except Exception as exc:
         clear_verify_code(user.id)
 
         current_app.logger.exception('Failed to send forgot-password verification email')
         detail = str(exc).strip()
         if current_app.debug and detail:
-            return _json_error(f'Khong the gui email: {detail}', 500)
+            return _json_error(f'Không thể gửi email: {detail}', 500)
 
-        return _json_error('Khong the gui email luc nay. Vui long thu lai sau.', 500)
+        return _json_error('Không thể gửi email lúc này. Vui lòng thử lại sau.', 500)
 
-    return _json_success('Ma xac nhan da duoc gui qua email.')
+    return _json_success('Mã xác nhận đã được gửi qua email.')
 
 
 @login_bp.route('/forgot-password/verify-code', methods=['POST'])
@@ -341,14 +387,14 @@ def verify_forgot_password():
         return _json_error(error, 400)
 
     session[FORGOT_PASSWORD_SESSION_KEY] = user.id
-    return _json_success('Xac nhan ma thanh cong.')
+    return _json_success('Xác nhận mã thành công.')
 
 
 @login_bp.route('/forgot-password/reset-password', methods=['POST'])
 def reset_forgot_password():
     user_id = session.get(FORGOT_PASSWORD_SESSION_KEY)
     if not user_id:
-        return _json_error('Vui long xac nhan ma truoc khi dat mat khau moi.', 403)
+        return _json_error('Vui lòng xác nhận mã trước khi đặt mật khẩu mới.', 403)
 
     payload = _request_payload()
     password = payload.get('password') or payload.get('newPassword') or ''
@@ -360,7 +406,7 @@ def reset_forgot_password():
 
     session.pop(FORGOT_PASSWORD_SESSION_KEY, None)
     return _json_success(
-        'Doi mat khau thanh cong. Vui long dang nhap lai.',
+        'Đổi mật khẩu thành công. Vui lòng đăng nhập lại.',
         redirect=url_for('login.login'),
         username=user.username,
     )
