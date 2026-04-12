@@ -12,7 +12,7 @@ from flask import (
     url_for,
 )
 from flask_mail import Message
-
+from flask_login import login_user
 from .. import mail, oauth
 from ..services.cloudinary_service import cloudinary_service
 from ..services import (
@@ -272,6 +272,7 @@ def login():
             flash(error, 'danger')
             return render_template('login.html'), 401
 
+        login_user(user)
         session['user_id'] = user.id
         session['username'] = user.username
         flash('Đăng nhập thành công.', 'success')
