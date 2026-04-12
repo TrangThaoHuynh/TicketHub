@@ -59,3 +59,4 @@ class Config:
         "GOOGLE_DISCOVERY_URL",
         "https://accounts.google.com/.well-known/openid-configuration",
     )
+    QR_SECRET = os.getenv("QR_SECRET", "your-qr-secret-key-change-this")

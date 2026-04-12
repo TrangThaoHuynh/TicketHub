@@ -227,8 +227,9 @@ def login():
             flash(error, 'danger')
             return render_template('login.html'), 401
 
-        # session['user_id'] = user.id
-        # session['username'] = user.username
+        login_user(user)
+        session['user_id'] = user.id
+        session['username'] = user.username
         flash('Dang nhap thanh cong.', 'success')
         return redirect(url_for('main.index'))
 
@@ -364,3 +365,9 @@ def reset_forgot_password():
         redirect=url_for('login.login'),
         username=user.username,
     )
+
+@login_bp.route('/logout')
+def logout():
+    session.clear()
+    flash('Đã đăng xuất.', 'success')
+    return redirect(url_for('main.index'))
