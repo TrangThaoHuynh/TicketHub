@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from .. import db
-from ..models.enums import AuthProvider
+from ..models.enums import AuthProvider, OrganizerStatus
 from ..models.user import Customer, Organizer, User
 
 
@@ -49,6 +49,14 @@ def _ensure_auth_provider(provider):
         return
 
     db.session.add(AuthProvider(provider=provider))
+    db.session.flush()
+
+
+def _ensure_organizer_pending_status():
+    if db.session.get(OrganizerStatus, "PENDING") is not None:
+        return
+
+    db.session.add(OrganizerStatus(status="PENDING"))
     db.session.flush()
 
 
@@ -107,6 +115,44 @@ def authenticate_user(identity, password):
         return None, "Tài khoản hoặc mật khẩu không chính xác."
 
     return user, None
+
+def get_user_role(user_id):
+    if db.session.get(Customer, user_id) is not None:
+        return "customer"
+    if db.session.get(Organizer, user_id) is not None:
+        return "organizer"
+
+    return None
+
+
+def assign_user_role(user_id, role):
+    normalized_role = (role or "").strip().lower()
+    if normalized_role not in {"customer", "organizer"}:
+        return None, "Vai trò không hợp lệ. Vui lòng chọn Khách hàng hoặc Nhà tổ chức."
+
+    user = db.session.get(User, user_id)
+    if user is None:
+        return None, "Tài khoản không tồn tại."
+
+    current_role = get_user_role(user_id)
+    if current_role:
+        if current_role == normalized_role:
+            return current_role, None
+        return None, "Tài khoản đã có vai trò khác, không thể cập nhật lại."
+
+    try:
+        if normalized_role == "organizer":
+            _ensure_organizer_pending_status()
+            db.session.add(Organizer(id=user_id))
+        else:
+            db.session.add(Customer(id=user_id))
+
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return None, "Không thể cập nhật vai trò tài khoản. Vui lòng thử lại."
+
+    return normalized_role, None
 
 
 def _normalize_signup_data(data):
@@ -227,6 +273,7 @@ def create_user(data):
         db.session.flush()
 
         if payload["account_type"] == "organizer":
+            _ensure_organizer_pending_status()
             db.session.add(Organizer(id=user.id))
         else:
             db.session.add(Customer(id=user.id))
@@ -301,7 +348,6 @@ def login_or_create_google_user(google_profile):
 
         db.session.add(user)
         db.session.flush()
-        db.session.add(Customer(id=user.id))
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
