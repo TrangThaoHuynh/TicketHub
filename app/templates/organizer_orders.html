@@ -82,7 +82,9 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <a class="orders-action" href="#" data-order-id="{{ o.id }}">Xem chi tiết</a>
+                                <a class="orders-action"
+                                    href="{{ url_for('organizer.organizer_event_order_detail', event_id=event.id, order_id=o.id) }}"
+                                    data-order-id="{{ o.id }}">Xem chi tiết</a>
                             </td>
                         </tr>
                         {% endfor %}

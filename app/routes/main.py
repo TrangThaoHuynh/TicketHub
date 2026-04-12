@@ -3,6 +3,11 @@ from ..services.event_service import get_event_types, get_home_events
 
 main = Blueprint('main', __name__)
 
+
+@main.route('/account/settings')
+def account_settings():
+    return render_template('account_settings.html', show_search=False)
+
 @main.route('/')
 def index():
     keyword = request.args.get("keyword")

@@ -4,200 +4,209 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/organizer_order_detail.css') }}">
 
 <div class="order-detail-page">
-  <div class="container">
-    <div class="order-detail-card" aria-label="Chi tiết đơn mua">
-      <div class="order-detail-card__topbar">
-        <h1 class="order-detail-title">Chi tiết đơn mua</h1>
-      </div>
-
-      {% set _order = order if order is defined and order else None %}
-      {% set _event = event if event is defined and event else None %}
-      {% set _tickets = tickets if tickets is defined and tickets else None %}
-      {% set _booker = booker if booker is defined and booker else None %}
-
-      {% set order_code = (_order.code if _order and _order.code is defined else (_order.id if _order else 'DH001')) %}
-      {% set created_at = (_order.created_at if _order and _order.created_at is defined else '14/04/2026') %}
-      {% set payment_method = (_order.payment_method if _order and _order.payment_method is defined else 'VNPAY') %}
-      {% set status_value = ((_order.status if _order and _order.status is defined else 'paid')|string|lower) %}
-
-      {% set event_title = (_event.title if _event and _event.title is defined else 'Sự kiện A') %}
-      {% set event_time = (_event.time_text if _event and _event.time_text is defined else '20:00 - 22/04/2026') %}
-      {% set event_location = (_event.location if _event and _event.location is defined else 'Nhà văn hóa thanh niên TP. Hồ Chí Minh') %}
-
-      <div class="order-detail-body">
-        <section class="info-section" aria-label="Thông tin đơn">
-          <div class="info-section__head">
-            <span class="info-section__line" aria-hidden="true"></span>
-            <div class="info-section__title">
-              <i class="fa-regular fa-clipboard"></i>
-              <span>Thông tin đơn</span>
-            </div>
-            <span class="info-section__line" aria-hidden="true"></span>
-          </div>
-
-          <div class="info-grid">
-            <div class="info-col">
-              <div class="info-item">
-                <span class="info-label">Mã đơn:</span>
-                <span class="info-value">{{ order_code }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Phương thức thanh toán:</span>
-                <span class="info-value">{{ payment_method }}</span>
-              </div>
+    <div class="container">
+        <div class="order-detail-card" aria-label="Chi tiết đơn mua">
+            <div class="order-detail-card__topbar">
+                <h1 class="order-detail-title">Chi tiết đơn mua</h1>
             </div>
 
-            <div class="info-col">
-              <div class="info-item">
-                <span class="info-label">Thời gian đặt:</span>
-                <span class="info-value">{{ created_at }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Trạng thái:</span>
-                {% if status_value in ['paid', 'success', 'completed', 'done'] %}
-                  <span class="info-value info-status info-status--paid">Đã thanh toán</span>
-                {% else %}
-                  <span class="info-value info-status info-status--unpaid">Chưa thanh toán</span>
-                {% endif %}
-              </div>
+            {% set _order = order if order is defined and order else None %}
+            {% set _event = event if event is defined and event else None %}
+            {% set _tickets = tickets if tickets is defined and tickets else None %}
+            {% set _booker = booker if booker is defined and booker else None %}
+
+            {% set order_code = (_order.code if _order and _order.code is defined else (_order.id if _order else
+            'DH001')) %}
+            {% set created_at = (_order.created_at if _order and _order.created_at is defined else '14/04/2026') %}
+            {% set payment_method = (_order.payment_method if _order and _order.payment_method is defined else 'VNPAY')
+            %}
+            {% set status_value = ((_order.status if _order and _order.status is defined else 'paid')|string|lower) %}
+
+            {% set event_title = (_event.title if _event and _event.title is defined else 'Sự kiện A') %}
+            {% set event_time = (_event.time_text if _event and _event.time_text is defined else '20:00 - 22/04/2026')
+            %}
+            {% set event_location = (_event.location if _event and _event.location is defined else 'Nhà văn hóa thanh
+            niên TP. Hồ Chí Minh') %}
+
+            <div class="order-detail-body">
+                <section class="info-section" aria-label="Thông tin đơn">
+                    <div class="info-section__head">
+                        <span class="info-section__line" aria-hidden="true"></span>
+                        <div class="info-section__title">
+                            <i class="fa-regular fa-clipboard"></i>
+                            <span>Thông tin đơn</span>
+                        </div>
+                        <span class="info-section__line" aria-hidden="true"></span>
+                    </div>
+
+                    <div class="info-grid">
+                        <div class="info-col">
+                            <div class="info-item">
+                                <span class="info-label">Mã đơn:</span>
+                                <span class="info-value">{{ order_code }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Phương thức thanh toán:</span>
+                                <span class="info-value">{{ payment_method }}</span>
+                            </div>
+                        </div>
+
+                        <div class="info-col">
+                            <div class="info-item">
+                                <span class="info-label">Thời gian đặt:</span>
+                                <span class="info-value">{{ created_at }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Trạng thái:</span>
+                                {% if status_value in ['paid', 'success', 'completed', 'done'] %}
+                                <span class="info-value info-status info-status--paid">Đã thanh toán</span>
+                                {% else %}
+                                <span class="info-value info-status info-status--unpaid">Chưa thanh toán</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="info-section" aria-label="Thông tin sự kiện">
+                    <div class="info-section__head">
+                        <span class="info-section__line" aria-hidden="true"></span>
+                        <div class="info-section__title">
+                            <i class="fa-solid fa-tag"></i>
+                            <span>Thông tin sự kiện</span>
+                        </div>
+                        <span class="info-section__line" aria-hidden="true"></span>
+                    </div>
+
+                    <div class="info-grid">
+                        <div class="info-col">
+                            <div class="info-item">
+                                <span class="info-label">Tên sự kiện:</span>
+                                <span class="info-value">{{ event_title }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Địa điểm:</span>
+                                <span class="info-value">{{ event_location }}</span>
+                            </div>
+                        </div>
+
+                        <div class="info-col">
+                            <div class="info-item">
+                                <span class="info-label">Thời gian:</span>
+                                <span class="info-value">{{ event_time }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="info-section" aria-label="Thông tin khách hàng">
+                    <div class="info-section__head">
+                        <span class="info-section__line" aria-hidden="true"></span>
+                        <div class="info-section__title">
+                            <i class="fa-solid fa-user"></i>
+                            <span>Thông tin khách hàng</span>
+                        </div>
+                        <span class="info-section__line" aria-hidden="true"></span>
+                    </div>
+
+                    <div class="customer-grid">
+                        <div class="customer-left">
+                            <div class="tickets-table-wrap">
+                                <table class="tickets-table" aria-label="Danh sách vé">
+                                    <thead>
+                                        <tr>
+                                            <th>Mã vé</th>
+                                            <th>Họ và tên</th>
+                                            <th>Số điện thoại</th>
+                                            <th>Loại vé</th>
+                                            <th>Giá</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if _tickets %}
+                                        {% for t in _tickets %}
+                                        <tr>
+                                            <td>{{ t.code or t.id }}</td>
+                                            <td>{{ t.holder_name or '—' }}</td>
+                                            <td>{{ t.holder_phone or '—' }}</td>
+                                            <td>{{ t.ticket_type_name or '—' }}</td>
+                                            <td>
+                                                {% if t.price is not none %}
+                                                {{ "{:,.0f}".format(t.price).replace(',', '.') }} đ
+                                                {% else %}
+                                                —
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                        {% else %}
+                                        <tr>
+                                            <td>VE001</td>
+                                            <td>Nguyễn Văn A</td>
+                                            <td>0934719411</td>
+                                            <td>Thường</td>
+                                            <td>1.000.000 đ</td>
+                                        </tr>
+                                        <tr>
+                                            <td>VE002</td>
+                                            <td>Lê Thị E</td>
+                                            <td>0353724513</td>
+                                            <td>Thường</td>
+                                            <td>1.000.000 đ</td>
+                                        </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {% set ticket_count = (_order.ticket_count if _order and _order.ticket_count is defined else
+                            ( (_tickets|length) if _tickets else 2 )) %}
+                            {% set total_amount = (_order.total_amount if _order and _order.total_amount is defined else
+                            2000000) %}
+
+                            <div class="tickets-summary">
+                                <div class="tickets-summary__left">
+                                    <span class="tickets-summary__label">Tổng số vé :</span>
+                                    <span class="tickets-summary__value">{{ ticket_count }}</span>
+                                </div>
+                                <div class="tickets-summary__right">
+                                    <span class="tickets-summary__label">Tổng tiền:</span>
+                                    <span class="tickets-summary__value">
+                                        {{ "{:,.0f}".format(total_amount).replace(',', '.') }} đ
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <aside class="customer-right" aria-label="Thông tin người đặt">
+                            <div class="booker-card">
+                                <div class="booker-card__title">Thông tin người đặt</div>
+
+                                {% set booker_name = (_booker.name if _booker and _booker.name is defined else 'Nguyễn
+                                Văn A') %}
+                                {% set booker_phone = (_booker.phone if _booker and _booker.phone is defined else
+                                '0934719411') %}
+                                {% set booker_email = (_booker.email if _booker and _booker.email is defined else
+                                'ABC11@gmail.com') %}
+
+                                <div class="booker-item">
+                                    <span class="booker-item__label">Tên:</span>
+                                    <span class="booker-item__value">{{ booker_name }}</span>
+                                </div>
+                                <div class="booker-item">
+                                    <span class="booker-item__label">Số điện thoại:</span>
+                                    <span class="booker-item__value">{{ booker_phone }}</span>
+                                </div>
+                                <div class="booker-item">
+                                    <span class="booker-item__label">Email:</span>
+                                    <span class="booker-item__value">{{ booker_email }}</span>
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+                </section>
             </div>
-          </div>
-        </section>
-
-        <section class="info-section" aria-label="Thông tin sự kiện">
-          <div class="info-section__head">
-            <span class="info-section__line" aria-hidden="true"></span>
-            <div class="info-section__title">
-              <i class="fa-solid fa-tag"></i>
-              <span>Thông tin sự kiện</span>
-            </div>
-            <span class="info-section__line" aria-hidden="true"></span>
-          </div>
-
-          <div class="info-grid">
-            <div class="info-col">
-              <div class="info-item">
-                <span class="info-label">Tên sự kiện:</span>
-                <span class="info-value">{{ event_title }}</span>
-              </div>
-              <div class="info-item">
-                <span class="info-label">Địa điểm:</span>
-                <span class="info-value">{{ event_location }}</span>
-              </div>
-            </div>
-
-            <div class="info-col">
-              <div class="info-item">
-                <span class="info-label">Thời gian:</span>
-                <span class="info-value">{{ event_time }}</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="info-section" aria-label="Thông tin khách hàng">
-          <div class="info-section__head">
-            <span class="info-section__line" aria-hidden="true"></span>
-            <div class="info-section__title">
-              <i class="fa-solid fa-user"></i>
-              <span>Thông tin khách hàng</span>
-            </div>
-            <span class="info-section__line" aria-hidden="true"></span>
-          </div>
-
-          <div class="customer-grid">
-            <div class="customer-left">
-              <div class="tickets-table-wrap">
-                <table class="tickets-table" aria-label="Danh sách vé">
-                  <thead>
-                    <tr>
-                      <th>Mã vé</th>
-                      <th>Họ và tên</th>
-                      <th>Số điện thoại</th>
-                      <th>Loại vé</th>
-                      <th>Giá</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% if _tickets %}
-                      {% for t in _tickets %}
-                        <tr>
-                          <td>{{ t.code or t.id }}</td>
-                          <td>{{ t.holder_name or '—' }}</td>
-                          <td>{{ t.holder_phone or '—' }}</td>
-                          <td>{{ t.ticket_type_name or '—' }}</td>
-                          <td>
-                            {% if t.price is not none %}
-                              {{ "{:,.0f}".format(t.price).replace(',', '.') }} đ
-                            {% else %}
-                              —
-                            {% endif %}
-                          </td>
-                        </tr>
-                      {% endfor %}
-                    {% else %}
-                      <tr>
-                        <td>VE001</td>
-                        <td>Nguyễn Văn A</td>
-                        <td>0934719411</td>
-                        <td>Thường</td>
-                        <td>1.000.000 đ</td>
-                      </tr>
-                      <tr>
-                        <td>VE002</td>
-                        <td>Lê Thị E</td>
-                        <td>0353724513</td>
-                        <td>Thường</td>
-                        <td>1.000.000 đ</td>
-                      </tr>
-                    {% endif %}
-                  </tbody>
-                </table>
-              </div>
-
-              {% set ticket_count = (_order.ticket_count if _order and _order.ticket_count is defined else ( (_tickets|length) if _tickets else 2 )) %}
-              {% set total_amount = (_order.total_amount if _order and _order.total_amount is defined else 2000000) %}
-
-              <div class="tickets-summary">
-                <div class="tickets-summary__left">
-                  <span class="tickets-summary__label">Tổng số vé :</span>
-                  <span class="tickets-summary__value">{{ ticket_count }}</span>
-                </div>
-                <div class="tickets-summary__right">
-                  <span class="tickets-summary__label">Tổng tiền:</span>
-                  <span class="tickets-summary__value">
-                    {{ "{:,.0f}".format(total_amount).replace(',', '.') }} đ
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <aside class="customer-right" aria-label="Thông tin người đặt">
-              <div class="booker-card">
-                <div class="booker-card__title">Thông tin người đặt</div>
-
-                {% set booker_name = (_booker.name if _booker and _booker.name is defined else 'Nguyễn Văn A') %}
-                {% set booker_phone = (_booker.phone if _booker and _booker.phone is defined else '0934719411') %}
-                {% set booker_email = (_booker.email if _booker and _booker.email is defined else 'ABC11@gmail.com') %}
-
-                <div class="booker-item">
-                  <span class="booker-item__label">Tên:</span>
-                  <span class="booker-item__value">{{ booker_name }}</span>
-                </div>
-                <div class="booker-item">
-                  <span class="booker-item__label">Số điện thoại:</span>
-                  <span class="booker-item__value">{{ booker_phone }}</span>
-                </div>
-                <div class="booker-item">
-                  <span class="booker-item__label">Email:</span>
-                  <span class="booker-item__value">{{ booker_email }}</span>
-                </div>
-              </div>
-            </aside>
-          </div>
-        </section>
-      </div>
+        </div>
     </div>
-  </div>
 </div>
 {% endblock %}
