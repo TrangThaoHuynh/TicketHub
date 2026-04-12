@@ -61,25 +61,3 @@ def my_tickets():
     ).order_by(Ticket.createdAt.desc()).paginate(page=page, per_page=12)
     
     return render_template("my_tickets.html", tickets=tickets)
-
-@orders_bp.route("/booking/<int:booking_id>/send-email")
-@login_required
-def send_booking_email(booking_id):
-    booking = Booking.query.get(booking_id)
-    if not booking:
-        abort(404)
-
-    if booking.customerId != current_user.id:
-        abort(403)
-
-    try:
-        send_ticket_email_by_booking(booking_id)
-        return jsonify({
-            "success": True,
-            "message": f"Đã gửi email vé cho booking #{booking_id}"
-        })
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "message": str(e)
-        }), 400
