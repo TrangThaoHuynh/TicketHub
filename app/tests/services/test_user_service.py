@@ -7,10 +7,12 @@ from werkzeug.security import check_password_hash
 from app import create_app, db
 from app.config import Config
 from app.models.enums import AuthProvider, OrganizerStatus
-from app.models.user import Customer, User
+from app.models.user import Customer, Organizer, User
 from app.services.user_service import (
+    assign_user_role,
     authenticate_user,
     create_user,
+    get_user_role,
     issue_verify_code,
     login_or_create_google_user,
     reset_password_by_user_id,
@@ -112,8 +114,9 @@ def test_authenticate_user_with_email_and_password(app):
 
 def test_authenticate_user_supports_legacy_plain_text_password(app):
     with app.app_context():
-        db.session.add(AuthProvider(provider="LOCAL"))
-        db.session.flush()
+        if db.session.get(AuthProvider, "LOCAL") is None:
+            db.session.add(AuthProvider(provider="LOCAL"))
+            db.session.flush()
 
         user = User(
             name="Legacy User",
@@ -135,7 +138,7 @@ def test_authenticate_user_supports_legacy_plain_text_password(app):
 
 
 # ================= GOOGLE LOGIN =================
-def test_login_or_create_google_user_creates_customer_on_first_login(app):
+def test_login_or_create_google_user_creates_user_without_role_on_first_login(app):
     with app.app_context():
         profile = {
             "sub": "google-sub-001",
@@ -149,8 +152,45 @@ def test_login_or_create_google_user_creates_customer_on_first_login(app):
         assert error is None
         assert user.provider == "GOOGLE"
         assert user.googleID == "google-sub-001"
-        assert db.session.get(Customer, user.id) is not None
+        assert db.session.get(Customer, user.id) is None
+        assert db.session.get(Organizer, user.id) is None
+        assert get_user_role(user.id) is None
         assert db.session.get(AuthProvider, "GOOGLE") is not None
+
+
+def test_assign_user_role_creates_customer_row(app):
+    with app.app_context():
+        profile = {
+            "sub": "google-sub-role-customer",
+            "email": "google.customer@example.com",
+            "name": "Google Customer",
+        }
+        user, _ = login_or_create_google_user(profile)
+
+        role, error = assign_user_role(user.id, "customer")
+
+        assert error is None
+        assert role == "customer"
+        assert db.session.get(Customer, user.id) is not None
+
+
+def test_assign_user_role_creates_organizer_with_pending_status(app):
+    with app.app_context():
+        profile = {
+            "sub": "google-sub-role-organizer",
+            "email": "google.organizer@example.com",
+            "name": "Google Organizer",
+        }
+        user, _ = login_or_create_google_user(profile)
+
+        role, error = assign_user_role(user.id, "organizer")
+
+        assert error is None
+        assert role == "organizer"
+
+        organizer = db.session.get(Organizer, user.id)
+        assert organizer is not None
+        assert organizer.status == "PENDING"
 
 
 def test_login_or_create_google_user_reuses_existing_google_account(app):
