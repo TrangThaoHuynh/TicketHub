@@ -1,76 +1,3 @@
-<style>
-  .dropdown-menu .dropdown-item {
-    color: #000 !important;
-  }
-
-  .dropdown-menu .dropdown-item:hover {
-    color: #000 !important;
-  }
-
-  .ticket-actions {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-left: auto;
-  }
-
-  .ticket-actions a {
-    font-size: 14px;
-    font-weight: 500;
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .ticket-actions-link {
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-  }
-
-  .ticket-actions img {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 1px solid #e5e7eb;
-    object-fit: cover;
-  }
-
-  .dropdown-menu {
-    border-radius: 10px;
-    border: 1px solid #e5e7eb;
-    padding: 6px 0;
-    min-width: 180px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-  }
-
-  .dropdown-item {
-    font-size: 14px;
-    padding: 8px 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .dropdown-item:hover {
-    background: #f3f4f6;
-  }
-
-  .dropdown-divider {
-    margin: 6px 0;
-  }
-
-  .dropdown-item i {
-    font-size: 13px;
-  }
-
-  @media (max-width: 768px) {
-    .ticket-actions span {
-      display: none;
-    }
-  }
-</style>
 <header class="ticket-header">
   <div class="container">
     <div class="ticket-header__inner">
@@ -189,12 +116,24 @@
       {% endblock %}
       <div class="ticket-actions">
         {% if current_user %}
+        <a class="ticket-manage-orders-link" href="#" aria-label="Quản lý đơn mua">
+          <i class="fa-solid fa-receipt"></i>
+          <span>Quản lý đơn mua</span>
+        </a>
+
+        {% if header_show_create_event %}
+        <a class="ticket-create-event-btn" href="{{ url_for('event.organizer_create_event') }}" aria-label="Tạo sự kiện">
+          <i class="fa-solid fa-plus"></i>
+          <span>Tạo sự kiện</span>
+        </a>
+        {% endif %}
+
         <div class="dropdown">
           <a class="ticket-actions-link dropdown-toggle d-flex align-items-center gap-2" href="#" role="button"
             data-bs-toggle="dropdown" aria-expanded="false">
 
             <img src="{{ current_user.avatar or 'https://via.placeholder.com/32' }}" alt="Avatar"
-              style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />
+              class="ticket-avatar" />
 
             <span>{{ current_user.name or current_user.username }}</span>
           </a>
@@ -338,57 +277,3 @@
     {% endif %}
   </div>
 </header>
-
-{% if show_search %}
-<script>
-  (function () {
-    function setupFilterDropdown(buttonId, panelId) {
-      const btn = document.getElementById(buttonId);
-      const panel = document.getElementById(panelId);
-      if (!btn || !panel) return;
-
-      function close() {
-        panel.classList.add("is-hidden");
-        btn.setAttribute("aria-expanded", "false");
-      }
-
-      function open() {
-        panel.classList.remove("is-hidden");
-        btn.setAttribute("aria-expanded", "true");
-      }
-
-      btn.addEventListener("click", function (e) {
-        e.preventDefault();
-        const isHidden = panel.classList.contains("is-hidden");
-        if (isHidden) open();
-        else close();
-      });
-
-      panel.addEventListener("click", function (e) {
-        const closeBtn = e.target.closest(".js-ticket-filter-close");
-        if (closeBtn) {
-          e.preventDefault();
-          close();
-        }
-      });
-
-      document.addEventListener("click", function (e) {
-        if (panel.classList.contains("is-hidden")) return;
-        if (btn.contains(e.target) || panel.contains(e.target)) return;
-        close();
-      });
-
-      document.addEventListener("keydown", function (e) {
-        if (e.key !== "Escape") return;
-        if (panel.classList.contains("is-hidden")) return;
-        close();
-      });
-    }
-
-    document.addEventListener("DOMContentLoaded", function () {
-      setupFilterDropdown("ticketFilterBtnDesktop", "ticketFilterPanelDesktop");
-      setupFilterDropdown("ticketFilterBtnMobile", "ticketFilterPanelMobile");
-    });
-  })();
-</script>
-{% endif %}

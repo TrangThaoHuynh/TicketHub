@@ -216,7 +216,6 @@ def login_google_callback():
 
     session['user_id'] = user.id
     session['username'] = user.username
-
     role = get_user_role(user.id)
     if role is None:
         session[GOOGLE_ROLE_SESSION_KEY] = user.id
@@ -226,7 +225,6 @@ def login_google_callback():
     session.pop(GOOGLE_ROLE_SESSION_KEY, None)
     flash('Đăng nhập Google thành công.', 'success')
     return redirect(url_for('main.index'))
-
 
 @login_bp.route('/login/google/choose-role', methods=['GET', 'POST'])
 def google_choose_role():

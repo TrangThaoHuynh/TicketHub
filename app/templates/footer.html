@@ -88,6 +88,7 @@
           <div class="mb-3"><i class="fas fa-credit-card text-info me-2"></i>VNPay</div>
         </div>
       </div>
+    </div>
     <hr class="border-secondary my-3" />
 
     <!-- Copyright -->
@@ -102,7 +103,6 @@
     <!-- Back to Top Button -->
     <div
       class="back-to-top position-fixed bottom-0 end-0 m-4"
-      style="z-index: 1000"
     >
       <button
         class="btn btn-back-to-top btn-sm rounded-circle p-2"
@@ -114,123 +114,3 @@
     </div>
   </div>
 </footer>
-
-<!-- CSS cho Footer -->
-<style>
-  .footer-section .team-member:hover {
-    color: #1c7ce2 !important;
-    transition: color 0.3s ease;
-  }
-
-  .footer-section .social-links a:hover {
-    color: #1c7ce2 !important;
-    transition: color 0.3s ease;
-  }
-
-  .footer-section .text-light a:hover {
-    color: #1c7ce2 !important;
-    transition: color 0.3s ease;
-  }
-  .payment-methods img {
-    opacity: 0.8;
-    transition: opacity 0.3s ease;
-  }
-  .payment-methods img:hover {
-    opacity: 1;
-  }
-  .back-to-top button {
-    box-shadow: 0 2px 10px rgba(28, 124, 226, 0.3);
-    display: none; /* Ẩn mặc định */
-  }
-
-.btn-back-to-top {
-  background-color: #1c7ce2;
-  color: white;
-  border: none;
-}
-
-.btn-back-to-top:hover {
-  background-color: #156dca;
-  color: white;
-}
-
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  /* Responsive */
-  @media (max-width: 768px) {
-    .footer-section {
-      text-align: center;
-    }
-
-    .footer-section .col-md-6 {
-      text-align: center !important;
-      margin-bottom: 10px;
-    }
-
-    .team-members {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 15px;
-    }
-
-    .team-members .mb-1 {
-      margin-bottom: 0 !important;
-    }
-
-    .back-to-top {
-      bottom: 20px !important;
-      right: 20px !important;
-    }
-  }
-</style>
-
-<!-- JavaScript cho Footer -->
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const backToTopBtn = document.getElementById("backToTopBtn");
-
-    // Hiển thị/ẩn nút back to top khi scroll
-    window.addEventListener("scroll", function () {
-      if (window.pageYOffset > 300) {
-        backToTopBtn.classList.add("show");
-        backToTopBtn.style.display = "inline-block";
-      } else {
-        backToTopBtn.classList.remove("show");
-        // Delay để animation chạy xong
-        setTimeout(() => {
-          if (!backToTopBtn.classList.contains("show")) {
-            backToTopBtn.style.display = "none";
-          }
-        }, 300);
-      }
-    });
-
-    // Function scroll to top
-    function scrollToTop() {
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
-    }
-
-    // Event listener cho nút back to top
-    backToTopBtn.addEventListener("click", scrollToTop);
-
-    // Optional: Keyboard accessibility
-    backToTopBtn.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        scrollToTop();
-      }
-    });
-  });
-</script>
