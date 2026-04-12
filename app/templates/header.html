@@ -6,6 +6,70 @@
   .dropdown-menu .dropdown-item:hover {
     color: #000 !important;
   }
+
+  .ticket-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: auto;
+  }
+
+  .ticket-actions a {
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ticket-actions-link {
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .ticket-actions img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid #e5e7eb;
+    object-fit: cover;
+  }
+
+  .dropdown-menu {
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    padding: 6px 0;
+    min-width: 180px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  .dropdown-item {
+    font-size: 14px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dropdown-item:hover {
+    background: #f3f4f6;
+  }
+
+  .dropdown-divider {
+    margin: 6px 0;
+  }
+
+  .dropdown-item i {
+    font-size: 13px;
+  }
+
+  @media (max-width: 768px) {
+    .ticket-actions span {
+      display: none;
+    }
+  }
 </style>
 <header class="ticket-header">
   <div class="container">
@@ -137,8 +201,8 @@
 
           <ul class="dropdown-menu dropdown-menu-end">
             <li>
-              <a class="dropdown-item" href="#">
-                <i class="fa fa-user me-2"></i>Trang cá nhân
+              <a class="dropdown-item" href="{{ url_for('main.account_settings') }}">
+                <i class="fa fa-user me-2"></i>Cài đặt tài khoản
               </a>
             </li>
             <li>
