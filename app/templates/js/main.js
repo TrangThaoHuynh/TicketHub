@@ -1,4 +1,32 @@
     document.addEventListener("DOMContentLoaded", function () {
+        const noticeStack = document.getElementById("mainNoticeStack");
+        const notices = document.querySelectorAll(".js-main-notice");
+
+        function removeNotice(notice) {
+            if (!notice || notice.classList.contains("is-hiding")) return;
+
+            notice.classList.add("is-hiding");
+            window.setTimeout(function () {
+                notice.remove();
+                if (noticeStack && !noticeStack.querySelector(".js-main-notice")) {
+                    noticeStack.remove();
+                }
+            }, 260);
+        }
+
+        notices.forEach(function (notice) {
+            const closeButton = notice.querySelector(".js-main-notice-close");
+            if (closeButton) {
+                closeButton.addEventListener("click", function () {
+                    removeNotice(notice);
+                });
+            }
+
+            window.setTimeout(function () {
+                removeNotice(notice);
+            }, 5000);
+        });
+
         const container = document.getElementById("eventTypes");
         const more = document.getElementById("eventTypeMore");
         const menu = document.getElementById("eventTypeMoreMenu");

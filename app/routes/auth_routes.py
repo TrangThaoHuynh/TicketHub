@@ -213,7 +213,6 @@ def login_google_callback():
 
     session['user_id'] = user.id
     session['username'] = user.username
-    flash('Dang nhap Google thanh cong.', 'success')
     return redirect(url_for('main.index'))
 
 @login_bp.route('/login', methods=['GET', 'POST'])
@@ -229,7 +228,6 @@ def login():
 
         session['user_id'] = user.id
         session['username'] = user.username
-        flash('Dang nhap thanh cong.', 'success')
         return redirect(url_for('main.index'))
 
     return render_template('login.html')
@@ -305,9 +303,9 @@ def request_forgot_password_code():
                 recipients=[user.email],
                 sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
                 body=(
-                    f'Xin chao {user.name or user.username},\n\n'
-                    f'Ma xac nhan cua ban la: {code}\n\n'
-                    'Nhap ma nay de xac nhan yeu cau doi mat khau.'
+                    f'Xin chào {user.name or user.username},\n\n'
+                    f'Mã xác nhận của bạn là: {code}\n\n'
+                    'Nhập mã này để xác nhận yêu cầu đổi mật khẩu.'
                 ),
             )
         )

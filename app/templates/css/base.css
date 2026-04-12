@@ -153,6 +153,31 @@ body {
   align-items: center;
   gap: 20px;
   white-space: nowrap;
+  margin-left: auto;
+}
+
+.ticket-actions .ticket-create-event-btn {
+  height: 34px;
+  border-radius: 999px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #ffffff;
+  background: #ffffff;
+  color: var(--primary-color);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ticket-actions .ticket-create-event-btn:hover {
+  background: #f2f7ff;
+  color: var(--primary-hover);
+}
+
+.ticket-actions .ticket-create-event-btn i {
+  font-size: 12px;
 }
 
 .ticket-actions a {
@@ -160,6 +185,12 @@ body {
   text-decoration: none;
   font-size: 16px;
   font-weight: 600;
+}
+
+.ticket-actions .ticket-manage-orders-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .ticket-actions a:hover {
@@ -311,6 +342,12 @@ body {
 
   .ticket-actions a {
     font-size: 13px;
+  }
+
+  .ticket-actions .ticket-create-event-btn {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
   }
 }
 

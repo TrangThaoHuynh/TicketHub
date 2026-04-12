@@ -116,6 +116,18 @@
       {% endblock %}
       <div class="ticket-actions">
         {% if current_user %}
+        <a class="ticket-manage-orders-link" href="#" aria-label="Quản lý đơn mua">
+          <i class="fa-solid fa-receipt"></i>
+          <span>Quản lý đơn mua</span>
+        </a>
+
+        {% if header_show_create_event %}
+        <a class="ticket-create-event-btn" href="{{ url_for('event.organizer_create_event') }}" aria-label="Tạo sự kiện">
+          <i class="fa-solid fa-plus"></i>
+          <span>Tạo sự kiện</span>
+        </a>
+        {% endif %}
+
         <div class="dropdown">
           <a class="ticket-actions-link dropdown-toggle d-flex align-items-center gap-2" href="#" role="button"
             data-bs-toggle="dropdown" aria-expanded="false">

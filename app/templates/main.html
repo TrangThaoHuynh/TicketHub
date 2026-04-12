@@ -6,6 +6,24 @@
 
 <div class="home-section">
     <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="main-notice-stack" id="mainNoticeStack" aria-live="polite" aria-atomic="true">
+            {% for category, message in messages %}
+            {% set notice_type = 'success' if category == 'success' else ('danger' if category == 'danger' else 'info') %}
+            <div class="main-notice main-notice--{{ notice_type }} js-main-notice" role="alert">
+                <div class="main-notice__content">
+                    <div class="main-notice__message">{{ message }}</div>
+                </div>
+                <button type="button" class="main-notice__close js-main-notice-close" aria-label="Đóng thông báo">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
         <div class="event-types" aria-label="Loại sự kiện" id="eventTypes">
             {% set selected_type = request.args.get('eventTypeId', '') %}
             {% set keyword = request.args.get('keyword', '') %}
@@ -24,12 +42,21 @@
             </a>
             {% endfor %}
 
-            <div class="dropdown event-type-more d-none" id="eventTypeMore">
-                <button class="event-type-pill dropdown-toggle" type="button" data-bs-toggle="dropdown"
-                    aria-expanded="false">
-                    Khác
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end" id="eventTypeMoreMenu"></ul>
+            <div class="event-type-tools">
+                <div class="dropdown event-type-more d-none" id="eventTypeMore">
+                    <button class="event-type-pill dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                        aria-expanded="false">
+                        Khác
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" id="eventTypeMoreMenu"></ul>
+                </div>
+
+                {% if is_organizer %}
+                <a class="event-create-btn" href="{{ url_for('event.organizer_create_event') }}" aria-label="Tạo sự kiện mới">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Tạo sự kiện</span>
+                </a>
+                {% endif %}
             </div>
         </div>
 
@@ -37,7 +64,7 @@
             {% if events and events|length > 0 %}
             <div class="events-grid" aria-label="Danh sách sự kiện">
                 {% for e in events %}
-                <a class="event-card" href="{{ url_for('event.event_details', event_id=e.id) }}">
+                <a class="event-card" href="{{ url_for('event.organizer_event_detail', event_id=e.id) if is_organizer else url_for('event.event_details', event_id=e.id) }}">
                     <article>
                         <div class="event-card__media">
                             {% if e.image %}
