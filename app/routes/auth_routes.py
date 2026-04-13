@@ -214,6 +214,7 @@ def login_google_callback():
         flash(error, 'danger')
         return redirect(url_for('login.login'))
 
+    login_user(user)
     session['user_id'] = user.id
     session['username'] = user.username
     role = get_user_role(user.id)
