@@ -274,18 +274,281 @@ body {
 }
 
 @media (max-width: 991px) {
-  .ticket-banner {
-    min-height: 280px;
+  /* ===== GRADIENT BACKGROUND ===== */
+  body {
+    background: #ffffff;
+    min-height: 100vh;
   }
 
-  .ticket-banner-placeholder {
-    min-height: 280px;
+  .ticket-hero {
+    background: #ffffff;
+    color: #0f172a;
+    padding: 1rem 0;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  .ticket-hero a {
+    color: #1c7ce2;
+    transition: all 0.3s ease;
+  }
+
+  .ticket-hero a:hover {
+    color: #156dca;
+    text-decoration: underline;
+  }
+
+  /* ===== TICKET CARD ===== */
+  .ticket-card {
+    position: relative;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 28px;
+    color: #0f172a;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    height: 100%;
+    transition: all 0.3s ease;
+  }
+
+  .ticket-card:hover {
+    border-color: #1c7ce2;
+    box-shadow: 0 20px 50px rgba(28, 124, 226, 0.15);
+    transform: translateY(-5px);
   }
 
   .ticket-card h3 {
-    font-size: 24px;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #0f172a;
   }
-}
+
+  .ticket-card .text-muted {
+    color: #64748b !important;
+    font-weight: 500;
+  }
+
+  .hr-soft {
+    border: none;
+    height: 1px;
+    background: #e2e8f0;
+    margin: 20px 0;
+  }
+
+  /* ===== PRICE DISPLAY ===== */
+  .price-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f5f8fc;
+    padding: 16px 12px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .price-section .h5 {
+    color: #1c7ce2;
+    font-weight: 700;
+  }
+
+  /* ===== BANNER ===== */
+  .ticket-banner {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    min-height: 380px;
+    height: 100%;
+    background: #f5f8fc;
+    border: 1px solid #e2e8f0;
+  }
+
+  .ticket-banner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .ticket-banner-placeholder {
+    min-height: 380px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #94a3ff;
+    background: #f5f8fc;
+    text-align: center;
+    padding: 24px;
+  }
+
+  .ticket-banner-placeholder i {
+    font-size: 72px;
+    margin-bottom: 16px;
+    opacity: 0.8;
+    color: #1c7ce2;
+  }
+
+  .ticket-banner-overlay {
+    position: absolute;
+    inset: 0;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .ticket-banner::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    box-shadow: none;
+    pointer-events: none;
+  }
+
+  /* ===== MAIN SECTION ===== */
+  .main-section {
+    background: #ffffff;
+    padding: 3rem 0;
+  }
+
+  /* ===== DESCRIPTION CARD ===== */
+  .card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    border-color: #1c7ce2;
+    box-shadow: 0 20px 50px rgba(28, 124, 226, 0.1);
+  }
+
+  .card-body {
+    color: #0f172a;
+    padding: 24px;
+  }
+
+  .card-body h5 {
+    color: #1c7ce2;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  .card-body p {
+    color: #64748b;
+    line-height: 1.8;
+  }
+
+  /* ===== TICKET TYPE CARD ===== */
+  .ticket-card {
+    position: relative;
+    background: #ffffff;
+    border: 2px solid #1c7ce2;
+    border-radius: 20px;
+    padding: 28px;
+    color: #0f172a;
+    box-shadow: 0 10px 30px rgba(28, 124, 226, 0.1);
+    height: 100%;
+  }
+
+  .ticket-type-card .fw-semibold {
+    color: #0f172a;
+    font-size: 16px;
+  }
+
+  .ticket-type-card .text-muted {
+    color: #64748b;
+  }
+
+  .ticket-type-card .text-success {
+    color: #10b981 !important;
+    font-weight: 600;
+  }
+
+  .ticket-type-card .text-danger {
+    color: #ef4444 !important;
+    font-weight: 600;
+  }
+
+  .ticket-type-card .text-primary {
+    color: #1c7ce2 !important;
+    font-weight: 700;
+    font-size: 18px;
+  }
+
+  /* ===== BUTTONS ===== */
+  .btn-success {
+    background: linear-gradient(135deg, #1e40af, #1e3a8a);
+    border: none;
+    color: white;
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(30, 64, 175, 0.3);
+    transition: all 0.3s ease;
+  }
+
+  .btn-success:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 40px rgba(30, 64, 175, 0.3);
+  }
+
+  .btn-success:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* ===== INPUT CONTROLS ===== */
+  .qty-input {
+    max-width: 80px;
+    background: white;
+    border: 2px solid #e2e8f0;
+    color: #0f172a;
+    font-weight: 600;
+    border-radius: 8px;
+  }
+
+  .qty-input:focus {
+    border-color: #1c7ce2;
+    box-shadow: 0 0 0 3px rgba(28, 124, 226, 0.1);
+  }
+
+  .btn-outline-secondary {
+    border: 2px solid #e2e8f0;
+    color: #64748b;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+  }
+
+  .btn-outline-secondary:hover {
+    border-color: #1c7ce2;
+    color: #1c7ce2;
+    background: rgba(28, 124, 226, 0.05);
+  }
+
+  /* ===== SUBTOTAL SECTION ===== */
+  #subtotal {
+    color: #10b981;
+    font-size: 18px;
+  }
+
+  @media (max-width: 991px) {
+    .ticket-banner {
+      min-height: 280px;
+    }
+
+    .ticket-banner-placeholder {
+      min-height: 280px;
+    }
+
+    .ticket-card h3 {
+      font-size: 24px;
+    }
+  }
 </style>
 
 <section class="ticket-hero">
@@ -300,9 +563,9 @@ body {
           <div class="d-flex align-items-center text-muted mb-2">
             <i class="fa-regular fa-calendar me-2"></i>
             {% if event.startTime %}
-              {{ event.startTime.strftime('%H:%M · %d/%m/%Y') }}
+            {{ event.startTime.strftime('%H:%M · %d/%m/%Y') }}
             {% else %}
-              Cập nhật sau
+            Cập nhật sau
             {% endif %}
           </div>
 
@@ -335,13 +598,13 @@ body {
       <div class="col-lg-7">
         <div class="ticket-banner">
           {% if event.image %}
-            <img src="{{ event.image }}" alt="banner {{ event.title }}">
+          <img src="{{ event.image }}" alt="banner {{ event.title }}">
           {% else %}
-            <div class="ticket-banner-placeholder">
-              <i class="fa-solid fa-image"></i>
-              <h4 class="mb-2" style="color: #e2e8f0">{{ event.title }}</h4>
-              <p class="mb-0" style="color: #94a3ff">Chưa có ảnh banner cho sự kiện này</p>
-            </div>
+          <div class="ticket-banner-placeholder">
+            <i class="fa-solid fa-image"></i>
+            <h4 class="mb-2" style="color: #e2e8f0">{{ event.title }}</h4>
+            <p class="mb-0" style="color: #94a3ff">Chưa có ảnh banner cho sự kiện này</p>
+          </div>
           {% endif %}
           <div class="ticket-banner-overlay"></div>
         </div>
@@ -372,59 +635,50 @@ body {
             <h5><i class="fas fa-ticket-alt me-2"></i>Chọn loại vé</h5>
 
             {% if ticket_types|length == 0 %}
-              <div class="alert alert-light mb-0" style="backg: rgba(148, 163, 255, 0.1); color: #94a3ff; border: 1px solid rgba(148, 163, 255, 0.2);">
-                Hiện chưa có loại vé.
-              </div>
+            <div class="alert alert-light mb-0"
+              style="backg: rgba(148, 163, 255, 0.1); color: #94a3ff; border: 1px solid rgba(148, 163, 255, 0.2);">
+              Hiện chưa có loại vé.
+            </div>
             {% else %}
-              {% for t in ticket_types %}
-                <div class="ticket-type-card">
-                  <div class="d-flex justify-content-between align-items-start">
-                    <div class="flex-grow-1">
-                      <div class="fw-semibold">{{ t.name }}</div>
-                      <div class="small text-muted mb-1">{{ t.description or 'Chưa có mô tả' }}</div>
-                      <div class="small {{ 'text-success' if t.remaining > 0 else 'text-danger' }}">
-                        {{ 'Còn ' ~ t.remaining ~ ' vé' if t.remaining > 0 else 'Hết vé' }}
-                      </div>
-                    </div>
-
-                    <div class="text-end ms-2" style="min-width: 190px;">
-                      <div class="text-primary">
-                        {{ "{:,.0f}".format((t.price or 0)|float) }} VNĐ
-                      </div>
-
-                      <div class="input-group input-group-sm mt-1">
-                        <button class="btn btn-outline-secondary" type="button"
-                                onclick="changeQty('{{ t.id }}', -1, {{ t.remaining|int }})">−</button>
-                        <input class="form-control text-center qty-input"
-                               id="qty-{{ t.id }}"
-                               type="number"
-                               min="0"
-                               max="{{ t.remaining|int }}"
-                               value="0"
-                               data-price="{{ t.price or 0 }}"
-                               {{ 'disabled' if t.remaining|int == 0 }}>
-                        <button class="btn btn-outline-secondary" type="button"
-                                onclick="changeQty('{{ t.id }}', 1, {{ t.remaining|int }})">+</button>
-                      </div>
-                    </div>
+            {% for t in ticket_types %}
+            <div class="ticket-type-card">
+              <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                  <div class="fw-semibold">{{ t.name }}</div>
+                  <div class="small text-muted mb-1">{{ t.description or 'Chưa có mô tả' }}</div>
+                  <div class="small {{ 'text-success' if t.remaining > 0 else 'text-danger' }}">
+                    {{ 'Còn ' ~ t.remaining ~ ' vé' if t.remaining > 0 else 'Hết vé' }}
                   </div>
                 </div>
-              {% endfor %}
 
-              <div class="d-flex justify-content-between align-items-center mt-3">
-                <div style="color: #cbd5e1;">Tạm tính</div>
-                <div id="subtotal" class="fw-semibold">0 VNĐ</div>
+                <div class="text-end ms-2" style="min-width: 190px;">
+                  <div class="text-primary">
+                    {{ "{:,.0f}".format((t.price or 0)|float) }} VNĐ
+                  </div>
+
+                  <div class="input-group input-group-sm mt-1">
+                    <button class="btn btn-outline-secondary" type="button"
+                      onclick="changeQty('{{ t.id }}', -1, {{ t.remaining|int }})">−</button>
+                    <input class="form-control text-center qty-input" id="qty-{{ t.id }}" type="number" min="0"
+                      max="{{ t.remaining|int }}" value="0" data-price="{{ t.price or 0 }}" {{ 'disabled' if
+                      t.remaining|int==0 }}>
+                    <button class="btn btn-outline-secondary" type="button"
+                      onclick="changeQty('{{ t.id }}', 1, {{ t.remaining|int }})">+</button>
+                  </div>
+                </div>
               </div>
+            </div>
+            {% endfor %}
 
-              <button
-                id="btnSubmit"
-                class="btn btn-success w-100 mt-3"
-                type="button"
-                disabled
-                onclick="alert('Chức năng đặt vé sẽ được bổ sung sau')"
-              >
-                <i class="fas fa-shopping-cart me-2"></i>Mua vé
-              </button>
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <div style="color: #cbd5e1;">Tạm tính</div>
+              <div id="subtotal" class="fw-semibold">0 VNĐ</div>
+            </div>
+
+            <button id="btnSubmit" class="btn btn-success w-100 mt-3" type="button" disabled
+              onclick="alert('Chức năng đặt vé sẽ được bổ sung sau')">
+              <i class="fas fa-shopping-cart me-2"></i>Mua vé
+            </button>
             {% endif %}
           </div>
         </div>

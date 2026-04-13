@@ -11,6 +11,11 @@ main = Blueprint(
     static_url_path='/main-assets'
 )
 
+
+@main.route('/account/settings')
+def account_settings():
+    return render_template('account_settings.html', show_search=False)
+
 @main.route('/')
 def index():
     user_id = session.get('user_id')
