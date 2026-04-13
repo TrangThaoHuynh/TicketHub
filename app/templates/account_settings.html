@@ -188,11 +188,18 @@
 
                     <div class="avatar-meta">
                         <h6>Ảnh đại diện</h6>
+                        {% if (current_user.provider if current_user else '')|upper != 'GOOGLE' %}
                         <p>Upload ảnh đại diện của bạn tại đây</p>
+                        {% endif %}
 
                         <div class="avatar-upload">
+                            {% if (current_user.provider if current_user else '')|upper == 'GOOGLE' %}
+                            <button type="button" class="btn btn-outline-secondary btn-sm" disabled>Upload</button>
+                            <span class="text-muted small">(Tài khoản Google không đổi ảnh tại đây)</span>
+                            {% else %}
                             <input class="d-none" id="avatarInput" name="avatar" type="file" accept="image/*" />
                             <label class="btn btn-outline-primary btn-sm" for="avatarInput">Upload</label>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -203,7 +210,8 @@
                 <div class="readonly-row__value">{{ current_user.username if current_user else '' }}</div>
             </div>
 
-            <form class="account-form" autocomplete="off" method="POST" action="{{ url_for('main.account_update_profile') }}">
+            <form class="account-form" autocomplete="off" method="POST"
+                action="{{ url_for('main.account_update_profile') }}">
                 <div class="mb-3">
                     <label class="form-label" for="displayName">Họ &amp; tên</label>
                     <input id="displayName" name="name" class="form-control" type="text" placeholder="Nhập họ & tên"
@@ -214,12 +222,17 @@
                     <div class="col-12 col-md-6">
                         <label class="form-label" for="email">Email</label>
                         <input id="email" name="email" class="form-control" type="email" placeholder="Nhập email"
-                            value="{{ current_user.email if current_user else '' }}" />
+                            value="{{ current_user.email if current_user else '' }}" {% if (current_user.provider if
+                            current_user else '' )|upper=='GOOGLE' %}disabled{% endif %} />
+                        {% if (current_user.provider if current_user else '')|upper == 'GOOGLE' %}
+                        <div class="form-text">Email của tài khoản Google không thể chỉnh sửa.</div>
+                        {% endif %}
                     </div>
 
                     <div class="col-12 col-md-6">
                         <label class="form-label" for="phone">Số điện thoại</label>
-                        <input id="phone" name="phoneNumber" class="form-control" type="tel" placeholder="Nhập số điện thoại"
+                        <input id="phone" name="phoneNumber" class="form-control" type="tel"
+                            placeholder="Nhập số điện thoại"
                             value="{{ current_user.phoneNumber if current_user else '' }}" />
                     </div>
                 </div>
@@ -242,17 +255,20 @@
                     <form autocomplete="off" method="POST" action="{{ url_for('main.account_change_password') }}">
                         <div class="mb-3">
                             <label class="form-label" for="currentPassword">Nhập mật khẩu hiện tại</label>
-                            <input id="currentPassword" name="current_password" class="form-control" type="password" placeholder="" />
+                            <input id="currentPassword" name="current_password" class="form-control" type="password"
+                                placeholder="" />
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label" for="newPassword">Nhập mật khẩu</label>
-                            <input id="newPassword" name="new_password" class="form-control" type="password" placeholder="" />
+                            <input id="newPassword" name="new_password" class="form-control" type="password"
+                                placeholder="" />
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label" for="confirmPassword">Nhập lại mật khẩu</label>
-                            <input id="confirmPassword" name="confirm_password" class="form-control" type="password" placeholder="" />
+                            <input id="confirmPassword" name="confirm_password" class="form-control" type="password"
+                                placeholder="" />
                         </div>
 
                         <div class="account-actions">
