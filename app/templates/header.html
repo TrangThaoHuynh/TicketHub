@@ -1,7 +1,7 @@
 <header class="ticket-header">
   <div class="container">
     <div class="ticket-header__inner">
-      <a href="#" class="ticket-brand">
+      <a href="{{ url_for('main.index') }}" class="ticket-brand">
         <i class="fas fa-ticket-alt"></i>
         <span>TicketHub</span>
       </a>
@@ -145,7 +145,7 @@
               </a>
             </li>
             <li>
-              <a class="dropdown-item" href="#">
+              <a class="dropdown-item" href="{{ url_for('orders.my_tickets') }}">
                 <i class="fa fa-ticket me-2"></i>Vé của tôi
               </a>
             </li>
