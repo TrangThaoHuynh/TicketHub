@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+
+{% block styles %}
+<link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet" />
+<link rel="stylesheet" href="{{ url_for('main.static', filename='css/organizer_event_detail.css') }}" />
+{% endblock %}
+
+{% block content %}
+{% set status_raw = (event.status|string|upper) if event and event.status else 'PENDING' %}
+{% set status_label = 'PUBLISHED' if status_raw == 'APPROVED' else status_raw %}
+{% set is_cancelled_event = status_label == 'CANCELLED' %}
+{% set is_finished_event = status_label == 'FINISHED' %}
+{% set is_pending_event = status_label == 'PENDING' %}
+{% set delete_action_label = 'xóa' if status_raw == 'PENDING' else 'ẩn' %}
+{% set delete_action_title = 'Xác nhận xóa sự kiện' if status_raw == 'PENDING' else 'Xác nhận ẩn sự kiện' %}
+
+{% set organizer_name = current_user.name if current_user and current_user.name else (current_user.username if current_user else 'Ban tổ chức') %}
+{% set organizer_avatar = current_user.avatar if current_user and current_user.avatar else 'https://via.placeholder.com/132x132?text=ORG' %}
+{% set organizer_note = current_user.email if current_user and current_user.email else 'Updating...' %}
+
+<section class="org-detail-page">
+	<div class="container">
+		<div class="org-detail-shell">
+			{% with messages = get_flashed_messages(with_categories=true) %}
+			{% if messages %}
+			<div class="org-detail-notice-stack" id="orgDetailNoticeStack" aria-live="polite" aria-atomic="true">
+				{% for category, message in messages %}
+				{% set notice_type = 'success' if category == 'success' else ('danger' if category == 'danger' else 'info') %}
+				<div class="org-detail-notice org-detail-notice--{{ notice_type }} js-org-detail-notice" role="alert">
+					<div class="org-detail-notice__message">{{ message }}</div>
+					<button type="button" class="org-detail-notice__close js-org-detail-notice-close" aria-label="Đóng thông báo">
+						<i class="fa-solid fa-xmark" aria-hidden="true"></i>
+					</button>
+				</div>
+				{% endfor %}
+			</div>
+			{% endif %}
+			{% endwith %}
+
+			<div class="org-detail-actions">
+				{% if not is_cancelled_event %}
+				{% if not is_finished_event %}
+				<button type="button" class="org-detail-btn org-detail-btn--ticket" data-action="open-ticket-adjust">Điều chỉnh vé</button>
+				{% endif %}
+				{% if is_pending_event %}
+				<button type="button" class="org-detail-btn org-detail-btn--edit" data-action="edit-event" data-edit-url="{{ url_for('event.organizer_edit_event', event_id=event.id) }}">Chỉnh sửa</button>
+				{% endif %}
+				<button
+					type="button"
+					class="org-detail-btn org-detail-btn--danger"
+					data-action="delete-event"
+					data-delete-hide-url="{{ url_for('event.organizer_delete_or_hide_event', event_id=event.id) }}"
+					data-delete-action-label="{{ delete_action_label }}"
+				>
+					Xóa/Ẩn sự kiện
+				</button>
+				{% endif %}
+			</div>
+
+			<article class="org-detail-hero">
+				<div class="org-detail-hero__info">
+					<h1 class="org-detail-title">{{ event.title if event and event.title else '[BẾN THÀNH] Trót Yêu Tri Kỷ Trung Quân - Hà Nhi' }}</h1>
+
+					<div class="org-detail-meta">
+						<i class="fa-regular fa-calendar"></i>
+						<span>
+							{% if event and event.startTime and event.endTime %}
+								{{ event.startTime.strftime('%H:%M') }} - {{ event.endTime.strftime('%H:%M, %d tháng %m, %Y') }}
+							{% elif event and event.startTime %}
+								{{ event.startTime.strftime('%H:%M, %d tháng %m, %Y') }}
+							{% else %}
+								20:00 - 22:00, 19 tháng 04, 2026
+							{% endif %}
+						</span>
+					</div>
+
+					<div class="org-detail-meta">
+						<i class="fa-solid fa-location-dot"></i>
+						<span>{{ event.location if event and event.location else 'Lầu 1, Nhà hát Bến Thành' }}</span>
+					</div>
+
+					<p class="org-detail-sub-location">{{ event.location if event and event.location else 'Số 6 Mạc Đĩnh Chi, Phường Sài Gòn, Thành phố Hồ Chí Minh' }}</p>
+
+					<div class="org-ticket-block">
+						<div class="org-ticket-block__label">Loại vé</div>
+						<div class="org-ticket-chip-wrap">
+							<div class="org-ticket-chip-list" role="tablist" aria-label="Danh sách loại vé">
+								{% if ticket_types is defined and ticket_types and ticket_types|length > 0 %}
+									{% for ticket in ticket_types %}
+									<button
+										type="button"
+										class="org-ticket-chip {% if loop.first %}is-active{% endif %}"
+										data-ticket-chip
+										data-ticket-id="{{ ticket.id }}"
+										data-price="{{ (ticket.price or 0)|float }}"
+										data-status="{{ status_label }}"
+										data-ticket-name="{{ ticket.name or ('Loại ' ~ loop.index) }}"
+									>
+										{{ ticket.name or ('Loại ' ~ loop.index) }}
+									</button>
+									{% endfor %}
+								{% else %}
+									{% for fallback_name in ['Loại A', 'Loại B', 'Loại C', 'Loại D'] %}
+									<button
+										type="button"
+										class="org-ticket-chip {% if loop.first %}is-active{% endif %}"
+										data-ticket-chip
+										data-price="800000"
+										data-status="{{ status_label }}"
+										data-ticket-name="{{ fallback_name }}"
+									>
+										{{ fallback_name }}
+									</button>
+									{% endfor %}
+								{% endif %}
+							</div>
+							<span class="org-ticket-chip-more" aria-hidden="true"><i class="fa-solid fa-angle-right"></i></span>
+						</div>
+					</div>
+
+					<div class="org-detail-summary">
+						<div class="org-detail-summary__item">
+							<span class="org-detail-summary__label">Giá</span>
+							<strong class="org-detail-summary__value" id="ticketPriceValue">800.000 đ</strong>
+						</div>
+
+						<div class="org-detail-summary__item">
+							<span class="org-detail-summary__label">Trạng thái</span>
+							<strong class="org-detail-summary__value" id="eventStatusValue">{{ status_label }}</strong>
+						</div>
+					</div>
+				</div>
+
+				<div class="org-detail-hero__banner">
+					{% if event and event.image %}
+					<img src="{{ event.image }}" alt="{{ event.title or 'Event banner' }}" />
+					{% else %}
+					<div class="org-detail-hero__banner-placeholder">
+						<i class="fa-regular fa-image"></i>
+						<span>Banner sự kiện</span>
+					</div>
+					{% endif %}
+				</div>
+			</article>
+
+			<section class="org-detail-panel org-detail-panel--info">
+				<header class="org-detail-panel__heading">Thông tin sự kiện</header>
+
+				<div class="org-detail-panel__body org-detail-panel__body--event js-event-info is-collapsed" id="organizerEventInfoBody">
+					{% if event and event.description %}
+					<div class="org-detail-rich-content js-event-info-content ql-editor">{{ event.description|safe }}</div>
+					{% else %}
+					<div class="org-detail-rich-content js-event-info-content ql-editor">
+						<p><strong>ĐIỀU KIỆN &amp; QUY ĐỊNH THAM DỰ SỰ KIỆN</strong></p>
+						<p>THỜI GIAN VÀ ĐỊA ĐIỂM SỰ KIỆN</p>
+						<p>
+							TP. Hồ Chí Minh: Thời gian 20:00, Chủ Nhật - Ngày 19/04/2026.<br />
+							Địa điểm: Nhà hát Bến Thành - Lầu 1, Số 6 Mạc Đĩnh Chi, Phường Sài Gòn, TP.HCM.
+						</p>
+						<p>
+							LƯU Ý: Tất cả giá vé trên đã bao gồm thuế giá trị gia tăng theo quy định của pháp luật áp dụng hiện hành.
+							Giá vé trên tương ứng với 01 chỗ ngồi.
+						</p>
+					</div>
+					{% endif %}
+
+					<button
+						type="button"
+						class="org-detail-expand-btn js-event-info-toggle is-hidden"
+						aria-label="Xem thêm nội dung"
+						aria-expanded="false"
+					>
+						<i class="fa-solid fa-caret-down"></i>
+					</button>
+				</div>
+			</section>
+
+			<section class="org-detail-panel">
+				<header class="org-detail-panel__heading">Ban tổ chức</header>
+				<div class="org-detail-panel__body">
+					<div class="org-detail-organizer">
+						<img src="{{ organizer_avatar }}" alt="{{ organizer_name }}" class="org-detail-organizer__avatar" />
+						<div class="org-detail-organizer__content">
+							<h3>{{ organizer_name }}</h3>
+							<p>{{ organizer_note }}</p>
+						</div>
+					</div>
+				</div>
+			</section>
+		</div>
+	</div>
+</section>
+
+<div
+	id="ticketAdjustModal"
+	class="ticket-adjust-modal is-hidden"
+	role="dialog"
+	aria-modal="true"
+	aria-labelledby="ticketAdjustModalTitle"
+	data-update-url="{{ ticket_adjust_update_url }}"
+>
+	<div class="ticket-adjust-modal__backdrop" data-close-ticket-adjust="true"></div>
+	<div class="ticket-adjust-modal__dialog" role="document">
+		<div class="ticket-adjust-modal__header">
+			<h2 id="ticketAdjustModalTitle">Điều chỉnh vé</h2>
+			<button class="ticket-adjust-modal__close" type="button" aria-label="Đóng" data-close-ticket-adjust="true">
+				<i class="fa-solid fa-xmark"></i>
+			</button>
+		</div>
+
+		<div id="ticketAdjustTabs" class="ticket-adjust-tabs" role="tablist" aria-label="Danh sách loại vé"></div>
+
+		<form id="ticketAdjustForm" class="ticket-adjust-form" novalidate>
+			<input id="adjustTicketTypeId" type="hidden" />
+
+			<div class="ticket-adjust-form__row ticket-adjust-form__row--name">
+				<span class="ticket-adjust-label">Tên vé:</span>
+				<strong id="adjustTicketTypeName" class="ticket-adjust-name">-</strong>
+			</div>
+
+			<div class="ticket-adjust-form__row ticket-adjust-form__row--2col">
+				<div class="ticket-adjust-col">
+					<label class="ticket-adjust-check" for="adjustCustomPrice">
+						<input id="adjustCustomPrice" type="checkbox" checked />
+						<span>Tự chỉnh giá vé</span>
+					</label>
+					<input id="adjustPriceInput" class="ticket-adjust-input" type="text" inputmode="numeric" />
+				</div>
+
+				<div class="ticket-adjust-col">
+					<label class="ticket-adjust-check" for="adjustSuggestedPrice">
+						<input id="adjustSuggestedPrice" type="checkbox" />
+						<span>Giá gợi ý</span>
+					</label>
+					<input id="adjustSuggestedPriceInput" class="ticket-adjust-input" type="text" value="800000" readonly aria-readonly="true" />
+				</div>
+			</div>
+
+			<div class="ticket-adjust-form__row ticket-adjust-form__row--2col">
+				<div class="ticket-adjust-col">
+					<div class="ticket-adjust-inline">
+						<span class="ticket-adjust-label">Số lượng vé còn lại:</span>
+						<div class="ticket-adjust-stepper" role="group" aria-label="Điều chỉnh số lượng vé">
+							<button id="adjustQtyMinus" type="button" aria-label="Giảm số lượng">-</button>
+							<input id="adjustRemainingQtyInput" type="number" min="0" value="0" />
+							<button id="adjustQtyPlus" type="button" aria-label="Tăng số lượng">+</button>
+						</div>
+					</div>
+				</div>
+
+				<div class="ticket-adjust-col">
+					<div class="ticket-adjust-inline ticket-adjust-inline--stack-mobile">
+						<span class="ticket-adjust-label">Thời gian bắt đầu bán vé:</span>
+						<input id="adjustSaleStartInput" class="ticket-adjust-input" type="datetime-local" />
+					</div>
+				</div>
+			</div>
+
+			<div class="ticket-adjust-form__row ticket-adjust-form__row--2col ticket-adjust-form__row--tight">
+				<div class="ticket-adjust-col">
+					<span class="ticket-adjust-label">Thông tin vé</span>
+				</div>
+
+				<div class="ticket-adjust-col">
+					<div class="ticket-adjust-inline ticket-adjust-inline--stack-mobile">
+						<span class="ticket-adjust-label">Thời gian kết thúc bán vé:</span>
+						<input id="adjustSaleEndInput" class="ticket-adjust-input" type="datetime-local" />
+					</div>
+				</div>
+			</div>
+
+			<div class="ticket-adjust-form__row">
+				<textarea id="adjustTicketDescInput" class="ticket-adjust-textarea" rows="6"></textarea>
+			</div>
+
+			<div class="ticket-adjust-form__actions">
+				<button id="closeTicketAdjustBtn" type="button" class="ticket-adjust-btn ticket-adjust-btn--cancel" data-close-ticket-adjust="true">Hủy</button>
+				<button type="submit" class="ticket-adjust-btn ticket-adjust-btn--confirm">Xác nhận</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+<div id="eventDeleteHideModal" class="event-action-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="eventDeleteHideModalTitle">
+	<div class="event-action-modal__backdrop" data-close-event-action="true"></div>
+	<div class="event-action-modal__dialog" role="document">
+		<h2 id="eventDeleteHideModalTitle" class="event-action-modal__title">{{ delete_action_title }}</h2>
+		<p class="event-action-modal__message">Bạn có chắc chắn muốn {{ delete_action_label }} sự kiện ?</p>
+		<div class="event-action-modal__actions">
+			<button type="button" class="event-action-modal__btn event-action-modal__btn--cancel" data-close-event-action="true">Hủy</button>
+			<button id="confirmDeleteEventBtn" type="button" class="event-action-modal__btn event-action-modal__btn--confirm">Xác nhận</button>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script id="ticketAdjustInitialData" type="application/json">{{ ticket_types_payload|default([], true)|tojson }}</script>
+<script src="{{ url_for('main.static', filename='js/organizer_event_detail.js') }}"></script>
+{% endblock %}

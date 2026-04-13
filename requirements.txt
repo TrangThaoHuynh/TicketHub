@@ -7,3 +7,7 @@ Authlib==1.6.9
 requests==2.33.1
 cloudinary==1.41.0
 pytest==9.0.3
+dotenv==1.2.2
+flask_login==0.6.3
+qrcode==8.2
+Pillow==12.2.0
