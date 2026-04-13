@@ -95,9 +95,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (!text) {
 			return "PENDING";
 		}
-		if (text === "APPROVED") {
-			return "PUBLISHED";
-		}
 		return text;
 	}
 

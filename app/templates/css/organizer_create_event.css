@@ -69,6 +69,12 @@ body {
 	color: #eaf4ff;
 	font-size: 13px;
 	font-weight: 600;
+	text-decoration: none;
+}
+
+.org-user-chip:hover {
+	color: #ffffff;
+	text-decoration: none;
 }
 
 .org-user-chip img {
@@ -83,7 +89,6 @@ body {
 	max-width: 1360px;
 	margin: 0 auto;
 	border: 1px solid #7c7c7c;
-	border-top: none;
 	padding: 16px 20px 98px;
 	background: #ececec;
 }
@@ -731,7 +736,7 @@ body.is-modal-open {
 	border: none;
 	background: transparent;
 	color: #2580dc;
-	font-size: 20px;
+	font-size: 15px;
 	font-weight: 600;
 	display: inline-flex;
 	align-items: center;
@@ -816,7 +821,7 @@ body.is-modal-open {
 	margin: 0 0 16px;
 	color: #2580dc;
 	text-align: center;
-	font-size: 42px;
+	font-size: 25px;
 	font-weight: 700;
 }
 

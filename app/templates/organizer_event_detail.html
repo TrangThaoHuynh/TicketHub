@@ -7,7 +7,7 @@
 
 {% block content %}
 {% set status_raw = (event.status|string|upper) if event and event.status else 'PENDING' %}
-{% set status_label = 'PUBLISHED' if status_raw == 'APPROVED' else status_raw %}
+{% set status_label = status_raw %}
 {% set is_cancelled_event = status_label == 'CANCELLED' %}
 {% set is_finished_event = status_label == 'FINISHED' %}
 {% set is_pending_event = status_label == 'PENDING' %}
