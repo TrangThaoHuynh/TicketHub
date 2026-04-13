@@ -1,185 +1,29 @@
 {% extends 'base.html' %}
-
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('main.static', filename='css/main.css') }}">
+{% endblock %}
 {% block content %}
-<style>
-    .home-section {
-        padding: 22px 0 30px;
-    }
-
-    .event-types {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-wrap: nowrap;
-        overflow: visible;
-        padding: 4px 2px 10px;
-        margin: 0;
-    }
-
-    .event-types::-webkit-scrollbar {
-        height: 6px;
-    }
-
-    .event-types::-webkit-scrollbar-thumb {
-        background: rgba(28, 124, 226, 0.25);
-        border-radius: 999px;
-    }
-
-    .event-type-pill {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        height: 36px;
-        padding: 0 16px;
-        border-radius: 999px;
-        border: 1px solid var(--primary-color);
-        color: var(--primary-color);
-        background: #ffffff;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 14px;
-        white-space: nowrap;
-    }
-
-    .event-type-pill:hover {
-        background: rgba(28, 124, 226, 0.08);
-        color: var(--primary-color);
-    }
-
-    .event-type-pill.is-active {
-        background: var(--primary-color);
-        color: #ffffff;
-    }
-
-    .event-type-more {
-        margin-left: auto;
-        position: relative;
-        z-index: 20;
-    }
-
-    .event-type-more .dropdown-menu {
-        min-width: 220px;
-        z-index: 1050;
-    }
-
-    .event-type-more .dropdown-item.active,
-    .event-type-more .dropdown-item:active {
-        background: var(--primary-color);
-    }
-
-    .events-grid {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 16px;
-    }
-
-    .event-card {
-        border: 1px solid var(--border-color);
-        border-radius: 14px;
-        overflow: hidden;
-        background: #ffffff;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        transition: transform 0.12s ease, box-shadow 0.12s ease;
-    }
-
-    .event-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 28px rgba(17, 24, 39, 0.08);
-    }
-
-    .event-card__media {
-        aspect-ratio: 16 / 9;
-        width: 100%;
-        background: var(--light-bg);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-    }
-
-    .event-card__media img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-    }
-
-    .event-card__placeholder {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #7b8794;
-        font-size: 28px;
-    }
-
-    .event-card__body {
-        padding: 12px 12px 14px;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        flex: 1;
-    }
-
-    .event-card__title {
-        margin: 0;
-        font-size: 15px;
-        font-weight: 700;
-        color: var(--text-dark);
-        line-height: 1.25;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        min-height: 38px;
-    }
-
-    .event-card__meta {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: #6b7280;
-        font-size: 13px;
-    }
-
-    .event-card__meta i {
-        color: #9aa4b2;
-    }
-
-    .event-card__price {
-        font-weight: 700;
-        color: var(--primary-color);
-        font-size: 14px;
-    }
-
-    a {
-        text-decoration: none;
-    }
-
-    @media (max-width: 1199.98px) {
-        .events-grid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-    }
-
-    @media (max-width: 991.98px) {
-        .events-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-    }
-
-    @media (max-width: 575.98px) {
-        .events-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-</style>
 
 <div class="home-section">
     <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="main-notice-stack" id="mainNoticeStack" aria-live="polite" aria-atomic="true">
+            {% for category, message in messages %}
+            {% set notice_type = 'success' if category == 'success' else ('danger' if category == 'danger' else 'info') %}
+            <div class="main-notice main-notice--{{ notice_type }} js-main-notice" role="alert">
+                <div class="main-notice__content">
+                    <div class="main-notice__message">{{ message }}</div>
+                </div>
+                <button type="button" class="main-notice__close js-main-notice-close" aria-label="Đóng thông báo">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
         <div class="event-types" aria-label="Loại sự kiện" id="eventTypes">
             {% set selected_type = request.args.get('eventTypeId', '') %}
             {% set keyword = request.args.get('keyword', '') %}
@@ -198,12 +42,21 @@
             </a>
             {% endfor %}
 
-            <div class="dropdown event-type-more d-none" id="eventTypeMore">
-                <button class="event-type-pill dropdown-toggle" type="button" data-bs-toggle="dropdown"
-                    aria-expanded="false">
-                    Khác
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end" id="eventTypeMoreMenu"></ul>
+            <div class="event-type-tools">
+                <div class="dropdown event-type-more d-none" id="eventTypeMore">
+                    <button class="event-type-pill dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                        aria-expanded="false">
+                        Khác
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" id="eventTypeMoreMenu"></ul>
+                </div>
+
+                {% if is_organizer %}
+                <a class="event-create-btn" href="{{ url_for('event.organizer_create_event') }}" aria-label="Tạo sự kiện mới">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Tạo sự kiện</span>
+                </a>
+                {% endif %}
             </div>
         </div>
 
@@ -211,7 +64,7 @@
             {% if events and events|length > 0 %}
             <div class="events-grid" aria-label="Danh sách sự kiện">
                 {% for e in events %}
-                <a class="event-card" href="{{ url_for('event.event_details', event_id=e.id) }}">
+                <a class="event-card" href="{{ url_for('event.organizer_event_detail', event_id=e.id) if is_organizer else url_for('event.event_details', event_id=e.id) }}">
                     <article>
                         <div class="event-card__media">
                             {% if e.image %}
@@ -259,79 +112,7 @@
         </div>
     </div>
 </div>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const container = document.getElementById("eventTypes");
-        const more = document.getElementById("eventTypeMore");
-        const menu = document.getElementById("eventTypeMoreMenu");
-
-        if (!container || !more || !menu) return;
-
-        function reset() {
-            menu.innerHTML = "";
-            more.classList.add("d-none");
-
-            const pills = container.querySelectorAll(".js-event-type-pill");
-            pills.forEach((pill) => {
-                pill.classList.remove("d-none");
-            });
-        }
-
-        function buildMenuItem(pill) {
-            const li = document.createElement("li");
-            const a = document.createElement("a");
-            a.className = "dropdown-item";
-            if (pill.dataset.active === "1") a.classList.add("active");
-            a.href = pill.getAttribute("href") || "#";
-            a.textContent = pill.textContent ? pill.textContent.trim() : "";
-            li.appendChild(a);
-            return li;
-        }
-
-        function layout() {
-            reset();
-
-            if (container.scrollWidth <= container.clientWidth) return;
-
-            more.classList.remove("d-none");
-
-            const pills = Array.from(container.querySelectorAll(".js-event-type-pill"));
-            const activePill = pills.find((p) => p.dataset.active === "1");
-
-            for (let i = pills.length - 1; i >= 0; i--) {
-                if (container.scrollWidth <= container.clientWidth) break;
-
-                const pill = pills[i];
-                if (pill === activePill) continue;
-
-                pill.classList.add("d-none");
-                menu.prepend(buildMenuItem(pill));
-            }
-
-            for (let i = 0; i < pills.length; i++) {
-                if (container.scrollWidth <= container.clientWidth) break;
-
-                const pill = pills[i];
-                if (pill === activePill) continue;
-                if (pill.classList.contains("d-none")) continue;
-
-                pill.classList.add("d-none");
-                menu.appendChild(buildMenuItem(pill));
-            }
-
-            if (!menu.children.length) {
-                more.classList.add("d-none");
-            }
-        }
-
-        let resizeTimer;
-        window.addEventListener("resize", function () {
-            window.clearTimeout(resizeTimer);
-            resizeTimer = window.setTimeout(layout, 80);
-        });
-
-        layout();
-    });
-</script>
+{% endblock %}
+{% block scripts %}
+    <script src="{{ url_for('main.static', filename='js/main.js') }}"></script>
 {% endblock %}

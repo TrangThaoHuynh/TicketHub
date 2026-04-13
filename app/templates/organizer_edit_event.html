@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Chỉnh sửa sự kiện - TicketHub</title>
+
+	<link
+		href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+		rel="stylesheet"
+		integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+		crossorigin="anonymous"
+	/>
+	<link
+		href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+		rel="stylesheet"
+	/>
+	<link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet" />
+	<link rel="stylesheet" href="{{ url_for('main.static', filename='css/organizer_edit_event.css') }}" />
+</head>
+<body>
+	<div class="org-page">
+		<header class="org-topbar">
+			<div class="org-topbar__inner">
+				<a class="org-brand" href="{{ url_for('main.index') }}">
+					<i class="fa-solid fa-ticket"></i>
+					<span>TicketHub</span>
+				</a>
+
+				<div class="org-topbar__actions">
+					<a class="org-home-link" href="{{ url_for('main.index') }}">Trang chủ</a>
+					<div class="org-user-chip">
+						<img
+							src="{{ current_user.avatar if current_user and current_user.avatar else 'https://via.placeholder.com/32' }}"
+							alt="Avatar"
+						/>
+						<span>{{ current_user.name if current_user and current_user.name else (current_user.username if current_user else 'Organizer') }}</span>
+					</div>
+				</div>
+			</div>
+		</header>
+
+		<main class="org-main">
+			{% set selected_status = selected_event_status if selected_event_status else 'PENDING' %}
+			{% with messages = get_flashed_messages(with_categories=true) %}
+				{% if messages %}
+					<div class="org-flash-wrap" aria-live="polite">
+						{% for category, message in messages %}
+							<div class="alert alert-{{ 'danger' if category == 'danger' else 'success' }}" role="alert">
+								{{ message }}
+							</div>
+						{% endfor %}
+					</div>
+				{% endif %}
+			{% endwith %}
+
+			<form id="eventForm" class="org-card" method="post" enctype="multipart/form-data" novalidate>
+				<input type="hidden" id="ticketsJson" name="tickets_json" value="[]" />
+
+				<div class="org-card__actions">
+					<button type="reset" class="btn btn-muted">Tải lại</button>
+					<button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+				</div>
+
+				<fieldset class="org-section">
+					<legend><span>*</span> Upload hình ảnh</legend>
+					<label class="upload-box" for="eventImageInput">
+						<input id="eventImageInput" type="file" name="eventImage" accept="image/png,image/jpeg,image/webp" />
+						<img id="eventImagePreview" class="upload-box__preview is-hidden" alt="Preview" />
+						<span id="uploadBoxText" class="upload-box__text" aria-hidden="true"></span>
+					</label>
+
+					<div class="upload-image-actions">
+						<button id="openImageEditorBtn" class="btn btn-muted btn-image-editor" type="button" disabled>
+							Chỉnh sửa ảnh
+						</button>
+					</div>
+
+					<div class="org-grid org-grid--2">
+						<div class="org-field">
+							<label for="eventTitle"><span>*</span> Tên sự kiện</label>
+							<input id="eventTitle" name="title" type="text" placeholder="Tên sự kiện" value="{{ initial_event_data.title }}" required />
+						</div>
+						<div class="org-field">
+							<label for="eventLocation"><span>*</span> Địa điểm tổ chức</label>
+							<input id="eventLocation" name="location" type="text" placeholder="Địa điểm tổ chức" value="{{ initial_event_data.location }}" required />
+						</div>
+					</div>
+				</fieldset>
+
+				<fieldset class="org-section">
+					<legend><span>*</span> Thể loại sự kiện</legend>
+					<div class="org-field">
+						<select id="eventTypeId" name="eventTypeId" required>
+							<option value="">Vui lòng chọn</option>
+							{% for t in event_types %}
+							<option value="{{ t.id }}" {% if initial_event_data.eventTypeId == t.id %}selected{% endif %}>{{ t.name or ('Loai ' ~ t.id) }}</option>
+							{% endfor %}
+						</select>
+					</div>
+				</fieldset>
+
+				<fieldset class="org-section">
+					<legend><span>*</span> Trạng thái sự kiện</legend>
+					<div class="org-radio-row">
+						<label>
+							<input type="radio" name="eventStatus" value="PENDING" {% if selected_status != 'PUBLISHED' %}checked{% endif %} />
+							Đang xử lý (PENDING)
+						</label>
+						<label>
+							<input type="radio" name="eventStatus" value="PUBLISHED" {% if selected_status == 'PUBLISHED' %}checked{% endif %} />
+							Công khai (PUBLISHED)
+						</label>
+					</div>
+				</fieldset>
+
+				<fieldset class="org-section">
+					<legend><span>*</span> Thông tin sự kiện</legend>
+					<div id="eventDescriptionToolbar" class="editor-toolbar" aria-label="công cụ định dạng mô tả sự kiện">
+						<span class="ql-formats">
+							<button type="button" class="ql-bold"></button>
+							<button type="button" class="ql-italic"></button>
+							<button type="button" class="ql-underline"></button>
+						</span>
+
+						<span class="ql-formats">
+							<select class="ql-header">
+								<option value="1"></option>
+								<option value="2"></option>
+								<option selected></option>
+							</select>
+							<select class="ql-font"></select>
+							<select class="ql-size"></select>
+						</span>
+
+						<span class="ql-formats">
+							<button type="button" class="ql-list" value="ordered"></button>
+							<button type="button" class="ql-list" value="bullet"></button>
+							<button type="button" class="ql-indent" value="-1"></button>
+							<button type="button" class="ql-indent" value="+1"></button>
+						</span>
+
+						<span class="ql-formats">
+							<select class="ql-color"></select>
+							<select class="ql-background"></select>
+							<button type="button" class="ql-link"></button>
+							<button type="button" class="ql-clean"></button>
+						</span>
+					</div>
+					<div id="eventDescriptionEditor" class="event-editor"></div>
+					<input id="eventDescription" name="description" type="hidden" value="{{ initial_event_data.description }}" />
+				</fieldset>
+
+				<fieldset class="org-section">
+					<div class="org-grid org-grid--2">
+						<div class="org-field">
+							<label for="startTime"><span>*</span> Thời gian bắt đầu</label>
+							<input id="startTime" name="startTime" type="datetime-local" value="{{ initial_event_data.startTime }}" required />
+						</div>
+						<div class="org-field">
+							<label for="endTime"><span>*</span> Thời gian kết thúc</label>
+							<input id="endTime" name="endTime" type="datetime-local" value="{{ initial_event_data.endTime }}" required />
+						</div>
+					</div>
+
+					<div class="org-limit-wrap">
+						<label class="org-limit-title"><span>*</span> Giới hạn số lượng loại vé trên mỗi tài khoản</label>
+						<div class="org-limit-controls">
+							<label>
+								<input type="radio" name="limitMode" value="limited" {% if initial_event_data.limitMode != 'unlimited' %}checked{% endif %} />
+								Giới hạn
+							</label>
+							<label>
+								<input type="radio" name="limitMode" value="unlimited" {% if initial_event_data.limitMode == 'unlimited' %}checked{% endif %} />
+								Không giới hạn
+							</label>
+
+							<div id="limitQtyBox" class="qty-stepper">
+								<button id="qtyMinus" type="button">-</button>
+								<input id="limitQuantity" name="limitQuantity" type="number" min="1" value="{{ initial_event_data.limitQuantity }}" />
+								<button id="qtyPlus" type="button">+</button>
+							</div>
+						</div>
+					</div>
+
+					<div class="org-field mt-2">
+						<label><span>*</span> Hình thức xác nhận vé tại công trường</label>
+						<div class="org-radio-row">
+								<label><input type="radio" name="verifyMethod" value="face" {% if initial_event_data.verifyMethod != 'qr' %}checked{% endif %} /> Quét khuôn mặt</label>
+								<label><input type="radio" name="verifyMethod" value="qr" {% if initial_event_data.verifyMethod == 'qr' %}checked{% endif %} /> Tạo QR</label>
+						</div>
+					</div>
+				</fieldset>
+
+				<fieldset class="org-section">
+					<legend><span>*</span> Loại vé</legend>
+					<div class="ticket-type-head">
+						<button id="openTicketFormBtn" class="link-btn" type="button">
+							<i class="fa-solid fa-plus"></i>
+							Tạo loại vé mới
+						</button>
+					</div>
+
+					<div id="ticketTypeEmpty" class="ticket-empty">Chưa có loại vé nào. Hãy thêm ít nhất một loại vé.</div>
+					<div id="ticketTypeList" class="ticket-list"></div>
+				</fieldset>
+			</form>
+
+			<form id="ticketTypeForm" class="org-card ticket-form is-hidden" novalidate>
+				<h2>Tạo loại vé mới</h2>
+
+				<div class="org-grid org-grid--2">
+					<div class="org-field org-grid-span-2">
+						<label for="ticketName"><span>*</span> Tên vé</label>
+						<input id="ticketName" type="text" placeholder="Tên vé" required />
+					</div>
+
+					<div class="org-field">
+						<label for="ticketPrice"><span>*</span> Giá vé</label>
+						<div class="ticket-price-group">
+							<input id="ticketPrice" type="number" min="0" step="1000" value="" required />
+							<label class="inline-check inline-check--button" for="ticketFree">
+								<input id="ticketFree" type="checkbox" />
+								<span>Miễn phí</span>
+							</label>
+						</div>
+					</div>
+
+					<div class="org-field">
+						<label for="ticketQuantity"><span>*</span> Tổng số lượng vé</label>
+						<input id="ticketQuantity" type="number" min="1" value="" required />
+					</div>
+
+					<div class="org-field">
+						<label for="ticketSaleStart"><span>*</span> Thời gian bắt đầu bán vé</label>
+						<input id="ticketSaleStart" type="datetime-local" required />
+					</div>
+
+					<div class="org-field">
+						<label for="ticketSaleEnd"><span>*</span> Thời gian kết thúc bán vé</label>
+						<input id="ticketSaleEnd" type="datetime-local" required />
+					</div>
+
+					<div class="org-field org-grid-span-2">
+						<label for="ticketDesc">Thông tin vé</label>
+						<textarea id="ticketDesc" rows="5" placeholder="Mô tả vé"></textarea>
+					</div>
+				</div>
+
+				<div class="ticket-form-actions">
+					<button id="cancelTicketBtn" type="button" class="btn btn-muted">Hủy</button>
+					<button type="submit" class="btn btn-primary">Tạo loại vé</button>
+				</div>
+			</form>
+
+			<div id="floatingEventActions" class="floating-event-actions" aria-hidden="true">
+				<button type="reset" class="btn btn-muted" form="eventForm">Tải lại</button>
+				<button type="submit" class="btn btn-primary" form="eventForm">Lưu thay đổi</button>
+			</div>
+		</main>
+	</div>
+
+	<div id="imageEditorModal" class="image-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="imageEditorModalTitle">
+		<div class="image-modal__backdrop" data-close-image-editor="true"></div>
+		<div class="image-modal__dialog" role="document">
+			<div class="image-modal__header">
+				<h2 id="imageEditorModalTitle">Chỉnh sửa ảnh sự kiện</h2>
+				<button id="closeImageEditorBtn" class="image-modal__close" type="button" aria-label="Đóng">
+					<i class="fa-solid fa-xmark"></i>
+				</button>
+			</div>
+			<p class="image-editor__title">Khung chỉnh sửa có kích thước 606x241. Kéo và đổi kích thước viền đen để cắt ảnh.</p>
+			<div id="eventImageStage" class="image-editor__stage image-modal__stage">
+				<canvas id="eventImageCanvas" width="606" height="241"></canvas>
+				<div id="cropFrame" class="crop-frame is-hidden" aria-hidden="true">
+					<button type="button" class="crop-handle crop-handle--nw" data-handle="nw" tabindex="-1" aria-hidden="true"></button>
+					<button type="button" class="crop-handle crop-handle--ne" data-handle="ne" tabindex="-1" aria-hidden="true"></button>
+					<button type="button" class="crop-handle crop-handle--sw" data-handle="sw" tabindex="-1" aria-hidden="true"></button>
+					<button type="button" class="crop-handle crop-handle--se" data-handle="se" tabindex="-1" aria-hidden="true"></button>
+				</div>
+			</div>
+			<div class="image-editor__controls">
+				<button id="zoomOutBtn" class="image-tool-btn" type="button" aria-label="Thu nhỏ">
+					<i class="fa-solid fa-magnifying-glass-minus"></i>
+				</button>
+				<input
+					id="imageZoomRange"
+					class="image-editor__zoom-slider"
+					type="range"
+					min="0.30"
+					max="4.00"
+					step="0.01"
+					value="1"
+					aria-label="Mức phóng to"
+				/>
+				<span id="imageZoomValue" class="image-editor__zoom-value">100%</span>
+				<button id="zoomInBtn" class="image-tool-btn" type="button" aria-label="Phóng to">
+					<i class="fa-solid fa-magnifying-glass-plus"></i>
+				</button>
+				<button id="rotateLeftBtn" class="image-tool-btn" type="button" aria-label="Xoay trái">
+					<i class="fa-solid fa-rotate-left"></i>
+				</button>
+				<button id="rotateRightBtn" class="image-tool-btn" type="button" aria-label="Xoay phải">
+					<i class="fa-solid fa-rotate-right"></i>
+				</button>
+				<button id="resetImageTransformBtn" class="image-tool-btn image-tool-btn--text" type="button">
+					Đặt lại
+				</button>
+			</div>
+			<div class="image-modal__actions">
+				<button id="cancelImageEditBtn" class="btn btn-muted" type="button">Hủy</button>
+				<button id="confirmImageEditBtn" class="btn btn-primary" type="button">Đồng ý</button>
+			</div>
+		</div>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+	<script id="initialEditEventData" type="application/json">{{ initial_event_data|tojson }}</script>
+	<script src="{{ url_for('main.static', filename='js/organizer_edit_event.js') }}"></script>
+</body>
+</html>
