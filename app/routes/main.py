@@ -29,6 +29,10 @@ def account_update_profile():
     email = request.form.get('email')
     phone_number = request.form.get('phoneNumber')
 
+    if (getattr(current_user, 'provider', None) or '').strip().upper() == 'GOOGLE':
+        # Google accounts should not be able to change email from this page.
+        email = getattr(current_user, 'email', None)
+
     user, error = update_user_profile(current_user.id, name, email, phone_number)
     if error:
         flash(error, 'danger')
@@ -60,6 +64,10 @@ def account_change_password():
 @main.route('/account/settings/avatar', methods=['POST'])
 @login_required
 def account_update_avatar():
+    if (getattr(current_user, 'provider', None) or '').strip().upper() == 'GOOGLE':
+        flash('Tài khoản Google không hỗ trợ đổi ảnh đại diện tại đây.', 'danger')
+        return redirect(url_for('main.account_settings'))
+
     avatar_file = request.files.get('avatar')
     upload_result, upload_error = cloudinary_service.upload_avatar(avatar_file)
     if upload_error:
