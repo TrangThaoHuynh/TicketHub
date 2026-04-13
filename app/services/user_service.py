@@ -436,3 +436,72 @@ def reset_password_by_user_id(user_id, password, confirm_password):
 
     db.session.commit()
     return user, None
+
+
+def update_user_profile(user_id, name, email, phone_number):
+    user = db.session.get(User, user_id)
+    if user is None:
+        return None, "Tài khoản không tồn tại."
+
+    name = " ".join((name or "").split())
+    email = (email or "").strip()
+    phone_number = (phone_number or "").strip()
+    phone_number = phone_number or None
+
+    if not name:
+        return None, "Vui lòng nhập họ tên."
+    if not _is_valid_name(name):
+        return None, "Tên không được chứa số hoặc ký tự đặc biệt."
+
+    if not email:
+        return None, "Vui lòng nhập email."
+    if not EMAIL_PATTERN.match(email):
+        return None, "Email không đúng định dạng."
+
+    if phone_number and not PHONE_PATTERN.match(phone_number):
+        return None, "Số điện thoại phải bắt đầu bằng 0 và có 10-11 chữ số."
+
+    email_owner = User.query.filter(func.lower(User.email) == email.lower()).first()
+    if email_owner and email_owner.id != user.id:
+        return None, "Email đã được sử dụng."
+
+    if phone_number:
+        phone_owner = User.query.filter(User.phoneNumber == phone_number).first()
+        if phone_owner and phone_owner.id != user.id:
+            return None, "Số điện thoại đã được sử dụng."
+
+    user.name = name
+    user.email = email
+    user.phoneNumber = phone_number
+    db.session.commit()
+    return user, None
+
+
+def change_password(user_id, current_password, new_password, confirm_password):
+    user = db.session.get(User, user_id)
+    if user is None:
+        return None, "Tài khoản không tồn tại."
+
+    provider = (user.provider or "LOCAL").strip().upper()
+    if provider != "LOCAL":
+        return None, "Tài khoản đăng nhập Google không hỗ trợ đổi mật khẩu tại đây."
+
+    current_password = current_password or ""
+    new_password = new_password or ""
+    confirm_password = confirm_password or ""
+
+    if not current_password:
+        return None, "Vui lòng nhập mật khẩu hiện tại."
+    if not _verify_password(current_password, user.password or ""):
+        return None, "Mật khẩu hiện tại không chính xác."
+
+    if not new_password:
+        return None, "Vui lòng nhập mật khẩu mới."
+    if not PASSWORD_PATTERN.match(new_password):
+        return None, "Mật khẩu phải có tối thiểu 8 ký tự, gồm chữ hoa, số và ký tự đặc biệt."
+    if new_password != confirm_password:
+        return None, "Nhập lại mật khẩu chưa khớp."
+
+    user.password = generate_password_hash(new_password)
+    db.session.commit()
+    return user, None
