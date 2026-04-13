@@ -638,9 +638,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	function formatPrice(price) {
 		if (Number(price) <= 0) {
-			return "Mien phi";
+			return "Miễn phí";
 		}
-		return "Tu " + Number(price).toLocaleString("vi-VN") + "d";
+		return "Từ " + Number(price).toLocaleString("vi-VN") + "d";
 	}
 
 	function syncTicketJson() {
@@ -719,9 +719,9 @@ document.addEventListener("DOMContentLoaded", function () {
 				'<p class="ticket-item__title">' + ticket.name + "</p>" +
 				'<p class="ticket-item__meta">' +
 				formatPrice(ticket.price) +
-				" | So luong: " +
+				" | Số lượng: " +
 				ticket.quantity +
-				" | Ban tu: " +
+				" | Bán từ: " +
 				ticket.saleStart.replace("T", " ") +
 				"</p>" +
 				"</div>" +
@@ -939,19 +939,19 @@ document.addEventListener("DOMContentLoaded", function () {
 		};
 
 		if (!payload.name) {
-			window.alert("Vui long nhap ten ve.");
+			window.alert("Vui lòng nhập tên vé.");
 			return;
 		}
 		if (!payload.saleStart || !payload.saleEnd) {
-			window.alert("Vui long chon day du thoi gian ban ve.");
+			window.alert("Vui lòng chọn đầy đủ thời gian bán vé.");
 			return;
 		}
 		if (!payload.isFree && !rawTicketPrice) {
-			window.alert("Vui long nhap gia ve.");
+			window.alert("Vui lòng nhập giá vé.");
 			return;
 		}
 		if (!rawTicketQuantity) {
-			window.alert("Vui long nhap tong so luong ve.");
+			window.alert("Vui lòng nhập tổng số lượng vé.");
 			return;
 		}
 		if (new Date(payload.saleEnd) < new Date(payload.saleStart)) {

@@ -1,45 +1,12 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-	<meta charset="UTF-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>Chỉnh sửa sự kiện - TicketHub</title>
+{% extends 'base.html' %}
 
-	<link
-		href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-		rel="stylesheet"
-		integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
-		crossorigin="anonymous"
-	/>
-	<link
-		href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-		rel="stylesheet"
-	/>
-	<link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet" />
-	<link rel="stylesheet" href="{{ url_for('main.static', filename='css/organizer_edit_event.css') }}" />
-</head>
-<body>
+{% block styles %}
+<link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet" />
+<link rel="stylesheet" href="{{ url_for('main.static', filename='css/organizer_edit_event.css') }}" />
+{% endblock %}
+
+{% block content %}
 	<div class="org-page">
-		<header class="org-topbar">
-			<div class="org-topbar__inner">
-				<a class="org-brand" href="{{ url_for('main.index') }}">
-					<i class="fa-solid fa-ticket"></i>
-					<span>TicketHub</span>
-				</a>
-
-				<div class="org-topbar__actions">
-					<a class="org-home-link" href="{{ url_for('main.index') }}">Trang chủ</a>
-					<div class="org-user-chip">
-						<img
-							src="{{ current_user.avatar if current_user and current_user.avatar else 'https://via.placeholder.com/32' }}"
-							alt="Avatar"
-						/>
-						<span>{{ current_user.name if current_user and current_user.name else (current_user.username if current_user else 'Organizer') }}</span>
-					</div>
-				</div>
-			</div>
-		</header>
-
 		<main class="org-main">
 			{% set selected_status = selected_event_status if selected_event_status else 'PENDING' %}
 			{% with messages = get_flashed_messages(with_categories=true) %}
@@ -314,8 +281,10 @@
 		</div>
 	</div>
 
+	{% endblock %}
+
+{% block scripts %}
 	<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
 	<script id="initialEditEventData" type="application/json">{{ initial_event_data|tojson }}</script>
 	<script src="{{ url_for('main.static', filename='js/organizer_edit_event.js') }}"></script>
-</body>
-</html>
+{% endblock %}

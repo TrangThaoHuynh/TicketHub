@@ -11,7 +11,7 @@ from ..models.event_type import EventType
 from ..models.ticket import Ticket
 from ..models.ticket_type import TicketType
 from ..models.user import Organizer
-from ..services import create_event, create_ticket_type
+from ..services import create_event, create_ticket_type, get_ticket_type_by_event, update_ticket_type
 from ..services.cloudinary_service import cloudinary_service
 from ..services.event_service import get_event_by_id, get_event_types
 from ..services.ticket_service import get_ticket_types_by_event_id, count_sold_by_ticket_type
@@ -54,45 +54,45 @@ def _parse_tickets_payload(raw_tickets_json):
     try:
         payload = json.loads(raw_tickets_json or "[]")
     except (TypeError, ValueError):
-        return None, "Danh sach loai ve khong hop le."
+        return None, "Danh sách loại vé không hợp lệ."
 
     if not isinstance(payload, list) or not payload:
-        return None, "Vui long tao it nhat mot loai ve."
+        return None, "Vui lòng tạo ít nhất một loại vé."
 
     normalized_tickets = []
     for index, ticket in enumerate(payload, start=1):
         if not isinstance(ticket, dict):
-            return None, f"Loai ve thu {index} khong hop le."
+            return None, f"Loại vé thu {index} không hợp lệ."
 
         ticket_id = ticket.get("id")
         normalized_ticket_id = None
         if ticket_id not in (None, ""):
             normalized_ticket_id = _parse_positive_int(ticket_id)
             if normalized_ticket_id is None:
-                return None, f"ID loai ve thu {index} khong hop le."
+                return None, f"ID loại vé thu {index} không hợp lệ."
 
         ticket_name = (ticket.get("name") or "").strip()
         if not ticket_name:
-            return None, f"Vui long nhap ten loai ve thu {index}."
+            return None, f"Vui lòng nhập tên loại vé thu {index}."
 
         quantity = _parse_positive_int(ticket.get("quantity"))
         if quantity is None:
-            return None, f"So luong loai ve thu {index} phai lon hon 0."
+            return None, f"Số lượng loại vé thu {index} phải lớn hơn 0."
 
         sale_start = _parse_datetime_local(ticket.get("saleStart"))
         sale_end = _parse_datetime_local(ticket.get("saleEnd"))
         if sale_start is None or sale_end is None:
-            return None, f"Thoi gian ban ve cua loai ve thu {index} khong hop le."
+            return None, f"Thời gian bán vé của loại vé thu {index} không hợp lệ."
         if sale_end < sale_start:
-            return None, f"Thoi gian ket thuc ban ve cua loai ve thu {index} phai sau thoi gian bat dau."
+            return None, f"Thời gian kết thúc bán vé của loại vé thu {index} phải sau thời gian bắt đầu."
 
         try:
             price = Decimal(str(ticket.get("price", 0)))
         except (InvalidOperation, ValueError, TypeError):
-            return None, f"Gia loai ve thu {index} khong hop le."
+            return None, f"Giá loại vé thu {index} không hợp lệ."
 
         if price < 0:
-            return None, f"Gia loai ve thu {index} khong duoc am."
+            return None, f"Giá loại vé thu {index} không được âm."
 
         is_free = bool(ticket.get("isFree"))
         if is_free:
@@ -132,15 +132,9 @@ def _normalize_event_status(value):
 
 def _resolve_event_status_for_db(value):
     normalized_status = _normalize_event_status(value)
-    status_candidates = {
-        "PUBLISHED": ["PUBLISHED", "APPROVED"],
-        "PENDING": ["PENDING"],
-    }.get(normalized_status, [normalized_status])
-
-    for candidate in status_candidates:
-        status_row = db.session.get(EventStatus, candidate)
-        if status_row:
-            return status_row.status
+    status_row = db.session.get(EventStatus, normalized_status)
+    if status_row:
+        return status_row.status
 
     pending_status = db.session.get(EventStatus, "PENDING")
     if pending_status:
@@ -166,7 +160,7 @@ def _resolve_cancelled_status_for_db():
 
 def _map_event_status_for_form(status):
     normalized = (status or "").strip().upper()
-    return "PUBLISHED" if normalized in {"PUBLISHED", "APPROVED"} else "PENDING"
+    return "PUBLISHED" if normalized == "PUBLISHED" else "PENDING"
 
 
 def _format_datetime_for_input(value):
@@ -273,29 +267,29 @@ def organizer_create_event():
     selected_status = _normalize_event_status(request.form.get("eventStatus"))
 
     if not title:
-        flash("Vui long nhap ten su kien.", "danger")
+        flash("Vui lòng nhập tên sự kiện.", "danger")
         return _render_create_event_page(event_types, selected_status), 400
 
     if not location:
-        flash("Vui long nhap dia diem to chuc.", "danger")
+        flash("Vui lòng nhập địa điểm tổ chức.", "danger")
         return _render_create_event_page(event_types, selected_status), 400
 
     if not description:
-        flash("Vui long nhap thong tin su kien.", "danger")
+        flash("Vui lòng nhập thông tin sự kiện.", "danger")
         return _render_create_event_page(event_types, selected_status), 400
 
     event_type_id = _parse_positive_int(request.form.get("eventTypeId"))
     if event_type_id is None or db.session.get(EventType, event_type_id) is None:
-        flash("Vui long chon the loai su kien hop le.", "danger")
+        flash("Vui lòng chọn thể loại sự kiện hợp lệ.", "danger")
         return _render_create_event_page(event_types, selected_status), 400
 
     start_time = _parse_datetime_local(request.form.get("startTime"))
     end_time = _parse_datetime_local(request.form.get("endTime"))
     if start_time is None or end_time is None:
-        flash("Vui long nhap day du thoi gian bat dau va ket thuc.", "danger")
+        flash("Vui lòng nhập đầy đủ thời gian bắt đầu và kết thúc.", "danger")
         return _render_create_event_page(event_types, selected_status), 400
     if end_time < start_time:
-        flash("Thoi gian ket thuc phai lon hon hoac bang thoi gian bat dau.", "danger")
+        flash("Thời gian kết thúc phải lớn hơn hoặc bằng thời gian bắt đầu.", "danger")
         return _render_create_event_page(event_types, selected_status), 400
 
     limit_mode = (request.form.get("limitMode") or "limited").strip().lower()
@@ -303,7 +297,7 @@ def organizer_create_event():
     if limit_mode != "unlimited":
         limit_quantity = _parse_positive_int(request.form.get("limitQuantity"))
         if limit_quantity is None:
-            flash("Gioi han so luong ve tren moi tai khoan phai lon hon 0.", "danger")
+            flash("Giới hạn số lượng vé trên mỗi tài khoản phải lớn hơn 0.", "danger")
             return _render_create_event_page(event_types, selected_status), 400
 
     verify_method = (request.form.get("verifyMethod") or "face").strip().lower()
@@ -357,10 +351,10 @@ def organizer_create_event():
     except Exception:
         db.session.rollback()
         current_app.logger.exception("Failed to create event")
-        flash("Khong the tao su kien. Vui long thu lai.", "danger")
+        flash("Không thể tạo sự kiện. Vui lòng thử lại.", "danger")
         return _render_create_event_page(event_types, selected_status), 500
 
-    flash("Tao su kien thanh cong.", "success")
+    flash("Tạo sự kiện thành công.", "success")
     return redirect(url_for('main.index'))
 
 
@@ -376,12 +370,12 @@ def organizer_edit_event(event_id: int):
         abort(404)
 
     if event.organizerId != organizer.id:
-        flash("Ban khong co quyen chinh sua su kien nay.", "danger")
+        flash("Bạn không có quyền chỉnh sửa sự kiện này.", "danger")
         return redirect(url_for('main.index'))
 
     normalized_event_status = (event.status or "").strip().upper()
     if normalized_event_status != "PENDING":
-        flash("Chi co the chinh sua su kien dang xu ly.", "danger")
+        flash("Chỉ có thể chỉnh sửa sự kiện đang xử lý.", "danger")
         return redirect(url_for('event.organizer_event_detail', event_id=event_id))
 
     event_types = get_event_types()
@@ -396,29 +390,29 @@ def organizer_edit_event(event_id: int):
     selected_status = _normalize_event_status(request.form.get("eventStatus"))
 
     if not title:
-        flash("Vui long nhap ten su kien.", "danger")
+        flash("Vui lòng nhập tên sự kiện.", "danger")
         return _render_edit_event_page(event, event_types, ticket_types, selected_status), 400
 
     if not location:
-        flash("Vui long nhap dia diem to chuc.", "danger")
+        flash("Vui lòng nhập địa điểm tổ chức.", "danger")
         return _render_edit_event_page(event, event_types, ticket_types, selected_status), 400
 
     if not description:
-        flash("Vui long nhap thong tin su kien.", "danger")
+        flash("Vui lòng nhập thông tin sự kiện.", "danger")
         return _render_edit_event_page(event, event_types, ticket_types, selected_status), 400
 
     event_type_id = _parse_positive_int(request.form.get("eventTypeId"))
     if event_type_id is None or db.session.get(EventType, event_type_id) is None:
-        flash("Vui long chon the loai su kien hop le.", "danger")
+        flash("Vui lòng chon thể loại sự kiện hợp lệ.", "danger")
         return _render_edit_event_page(event, event_types, ticket_types, selected_status), 400
 
     start_time = _parse_datetime_local(request.form.get("startTime"))
     end_time = _parse_datetime_local(request.form.get("endTime"))
     if start_time is None or end_time is None:
-        flash("Vui long nhap day du thoi gian bat dau va ket thuc.", "danger")
+        flash("Vui lòng nhập đầy đủ thời gian bắt đầu và kết thúc.", "danger")
         return _render_edit_event_page(event, event_types, ticket_types, selected_status), 400
     if end_time < start_time:
-        flash("Thoi gian ket thuc phai lon hon hoac bang thoi gian bat dau.", "danger")
+        flash("Thời gian kết thúc phải lớn hơn hoặc bằng thời gian bắt đầu.", "danger")
         return _render_edit_event_page(event, event_types, ticket_types, selected_status), 400
 
     limit_mode = (request.form.get("limitMode") or "limited").strip().lower()
@@ -426,7 +420,7 @@ def organizer_edit_event(event_id: int):
     if limit_mode != "unlimited":
         limit_quantity = _parse_positive_int(request.form.get("limitQuantity"))
         if limit_quantity is None:
-            flash("Gioi han so luong ve tren moi tai khoan phai lon hon 0.", "danger")
+            flash("Giới hạn số lượng vé trên mỗi tài khoản phải lớn hơn 0.", "danger")
             return _render_edit_event_page(event, event_types, ticket_types, selected_status), 400
 
     verify_method = (request.form.get("verifyMethod") or "face").strip().lower()
@@ -450,11 +444,11 @@ def organizer_edit_event(event_id: int):
             continue
 
         if ticket_id not in existing_ticket_by_id:
-            flash(f"Loai ve thu {index} khong ton tai hoac khong thuoc su kien nay.", "danger")
+            flash(f"Loại vé thứ {index} không tồn tại hoặc không thuộc sự kiện này.", "danger")
             return _render_edit_event_page(event, event_types, ticket_types, selected_status), 400
 
         if ticket_id in incoming_existing_ids:
-            flash("Danh sach loai ve bi trung ID.", "danger")
+            flash("Danh sách loại vé bị trùng ID.", "danger")
             return _render_edit_event_page(event, event_types, ticket_types, selected_status), 400
 
         incoming_existing_ids.add(ticket_id)
@@ -467,7 +461,7 @@ def organizer_edit_event(event_id: int):
             .first()
         )
         if has_issued_tickets:
-            flash("Khong the xoa loai ve da phat sinh giao dich.", "danger")
+            flash("Không thể xóa loại vé đã phát sinh giao dịch.", "danger")
             return _render_edit_event_page(event, event_types, ticket_types, selected_status), 400
 
     try:
@@ -487,18 +481,26 @@ def organizer_edit_event(event_id: int):
 
         for ticket in ticket_payload:
             ticket_id = ticket.get("id")
+            ticket_data = {
+                "name": ticket["name"],
+                "description": ticket["description"],
+                "price": ticket["price"],
+                "quantity": ticket["quantity"],
+                "saleStart": ticket["saleStart"],
+                "saleEnd": ticket["saleEnd"],
+            }
+
             if ticket_id is None:
-                target_ticket = TicketType(eventId=event.id)
-                db.session.add(target_ticket)
+                create_ticket_type(
+                    {
+                        **ticket_data,
+                        "eventId": event.id,
+                    },
+                    commit=False,
+                )
             else:
                 target_ticket = existing_ticket_by_id[ticket_id]
-
-            target_ticket.name = ticket["name"]
-            target_ticket.description = ticket["description"]
-            target_ticket.price = ticket["price"]
-            target_ticket.quantity = ticket["quantity"]
-            target_ticket.saleStart = ticket["saleStart"]
-            target_ticket.saleEnd = ticket["saleEnd"]
+                update_ticket_type(target_ticket, ticket_data, commit=False)
 
         for ticket_id in removed_ticket_ids:
             db.session.delete(existing_ticket_by_id[ticket_id])
@@ -507,10 +509,10 @@ def organizer_edit_event(event_id: int):
     except Exception:
         db.session.rollback()
         current_app.logger.exception("Failed to update event")
-        flash("Khong the cap nhat su kien. Vui long thu lai.", "danger")
+        flash("Không thể cập nhật sự kiện. Vui lòng thử lại.", "danger")
         return _render_edit_event_page(event, event_types, ticket_types, selected_status), 500
 
-    flash("Cap nhat su kien thanh cong.", "success")
+    flash("Cập nhật sự kiện thành công.", "success")
     return redirect(url_for('event.organizer_event_detail', event_id=event_id))
 
 
@@ -526,7 +528,7 @@ def organizer_event_detail(event_id: int):
         abort(404)
 
     if event.organizerId != organizer.id:
-        flash("Ban khong co quyen xem chi tiet su kien nay.", "danger")
+        flash("Bạn không có quyền xem chi tiết sự kiện này.", "danger")
         return redirect(url_for('main.index'))
 
     ticket_types = get_ticket_types_by_event_id(event_id) or []
@@ -542,6 +544,7 @@ def organizer_event_detail(event_id: int):
         ticket_types_payload=[_serialize_ticket_type_for_modal(t, sold_map.get(t.id, 0)) for t in ticket_types],
         ticket_adjust_update_url=url_for('event.organizer_update_ticket_type', event_id=event_id),
         show_search=False,
+        header_show_manage_orders=True,
         header_show_create_event=True,
     )
 
@@ -551,61 +554,67 @@ def organizer_update_ticket_type(event_id: int):
     user_id = session.get('user_id')
     organizer = db.session.get(Organizer, user_id) if user_id else None
     if organizer is None:
-        return jsonify({"message": "Ban can dang nhap de thuc hien thao tac nay."}), 401
+        return jsonify({"message": "Bạn cần đăng nhập để thực hiện thao tác này."}), 401
 
     event = get_event_by_id(event_id)
     if event is None:
-        return jsonify({"message": "Su kien khong ton tai."}), 404
+        return jsonify({"message": "Sự kiện không tồn tại."}), 404
 
     if event.organizerId != organizer.id:
-        return jsonify({"message": "Ban khong co quyen cap nhat loai ve cua su kien nay."}), 403
+        return jsonify({"message": "Bạn không có quyền cập nhật loại vé của sự kiện này."}), 403
 
     payload = request.get_json(silent=True) or {}
     ticket_type_id = _parse_positive_int(payload.get("ticketTypeId"))
     if ticket_type_id is None:
-        return jsonify({"message": "ID loai ve khong hop le."}), 400
+        return jsonify({"message": "ID loại vé không hợp lệ."}), 400
 
-    ticket_type = TicketType.query.filter_by(id=ticket_type_id, eventId=event.id).first()
+    ticket_type = get_ticket_type_by_event(ticket_type_id, event.id)
     if ticket_type is None:
-        return jsonify({"message": "Loai ve khong ton tai hoac khong thuoc su kien nay."}), 404
+        return jsonify({"message": "Loại vé không tồn tại hoặc không thuộc sự kiện này."}), 404
 
     try:
         price = Decimal(str(payload.get("price", "0")))
     except (InvalidOperation, ValueError, TypeError):
-        return jsonify({"message": "Gia ve khong hop le."}), 400
+        return jsonify({"message": "Giá vé không hợp lệ."}), 400
 
     if price < 0:
-        return jsonify({"message": "Gia ve khong duoc am."}), 400
+        return jsonify({"message": "Giá vé không được âm."}), 400
 
     remaining_quantity = _parse_non_negative_int(payload.get("remainingQuantity"))
     if remaining_quantity is None:
-        return jsonify({"message": "So luong ve con lai khong hop le."}), 400
+        return jsonify({"message": "Số lượng vé còn lại không hợp lệ."}), 400
 
     sale_start = _parse_datetime_local(payload.get("saleStart"))
     sale_end = _parse_datetime_local(payload.get("saleEnd"))
     if sale_start is None or sale_end is None:
-        return jsonify({"message": "Thoi gian bat dau/ket thuc ban ve khong hop le."}), 400
+        return jsonify({"message": "Thời gian bắt đầu/kết thúc bán vé không hợp lệ."}), 400
     if sale_end < sale_start:
-        return jsonify({"message": "Thoi gian ket thuc ban ve phai sau thoi gian bat dau."}), 400
+        return jsonify({"message": "Thời gian kết thúc bán vé phải sau thời gian bắt đầu."}), 400
 
     sold_count = count_sold_by_ticket_type([ticket_type.id]).get(ticket_type.id, 0)
 
-    ticket_type.price = price
-    ticket_type.quantity = sold_count + remaining_quantity
-    ticket_type.saleStart = sale_start
-    ticket_type.saleEnd = sale_end
-    ticket_type.description = (payload.get("description") or "").strip()
+    update_ticket_type(
+        ticket_type,
+        {
+            "price": price,
+            "quantity": sold_count + remaining_quantity,
+            "saleStart": sale_start,
+            "saleEnd": sale_end,
+            "description": (payload.get("description") or "").strip(),
+        },
+        commit=False,
+    )
 
     try:
         db.session.commit()
     except Exception:
         db.session.rollback()
         current_app.logger.exception("Failed to update ticket type from organizer detail modal")
-        return jsonify({"message": "Khong the cap nhat loai ve. Vui long thu lai."}), 500
+        return jsonify({"message": "Không thể cập nhật loại vé. Vui lòng thử lại."}), 500
 
     return jsonify(
         {
-            "message": "Cap nhat loai ve thanh cong.",
+            "message": "Cập nhật loại vé thành công.",
             "ticket": _serialize_ticket_type_for_modal(ticket_type, sold_count=sold_count),
         }
     )
@@ -616,14 +625,14 @@ def organizer_delete_or_hide_event(event_id: int):
     user_id = session.get('user_id')
     organizer = db.session.get(Organizer, user_id) if user_id else None
     if organizer is None:
-        return jsonify({"message": "Ban can dang nhap de thuc hien thao tac nay."}), 401
+        return jsonify({"message": "Bạn cần đăng nhập để thực hiện thao tác này."}), 401
 
     event = get_event_by_id(event_id)
     if event is None:
-        return jsonify({"message": "Su kien khong ton tai."}), 404
+        return jsonify({"message": "Sự kiện không tồn tại."}), 404
 
     if event.organizerId != organizer.id:
-        return jsonify({"message": "Ban khong co quyen thuc hien thao tac voi su kien nay."}), 403
+        return jsonify({"message": "Bạn không có quyền thực hiện thao tác với sự kiện này."}), 403
 
     normalized_status = (event.status or "").strip().upper()
 
@@ -641,22 +650,22 @@ def organizer_delete_or_hide_event(event_id: int):
         except Exception:
             db.session.rollback()
             current_app.logger.exception("Failed to permanently delete pending event")
-            return jsonify({"message": "Khong the xoa su kien. Vui long thu lai."}), 500
+            return jsonify({"message": "Không thể xóa sự kiện. Vui lòng thử lại."}), 500
 
-        flash("Xoa su kien thanh cong.", "success")
+        flash("Xóa sự kiện thành công.", "success")
 
         return jsonify(
             {
-                "message": "Xoa su kien thanh cong.",
+                "message": "Xóa sự kiện thành công.",
                 "action": "deleted",
                 "redirectUrl": url_for('main.index'),
             }
         )
 
-    if normalized_status in {"PUBLISHED", "APPROVED", "FINISHED"}:
+    if normalized_status in {"PUBLISHED", "FINISHED"}:
         target_cancelled_status = _resolve_cancelled_status_for_db()
         if target_cancelled_status is None:
-            return jsonify({"message": "Khong tim thay trang thai CANCELLED de cap nhat."}), 500
+            return jsonify({"message": "Không thể tìm thấy trạng thái CANCELLED để cập nhật."}), 500
 
         try:
             event.status = target_cancelled_status
@@ -664,19 +673,19 @@ def organizer_delete_or_hide_event(event_id: int):
         except Exception:
             db.session.rollback()
             current_app.logger.exception("Failed to set event status to CANCELLED")
-            return jsonify({"message": "Khong the an su kien. Vui long thu lai."}), 500
+            return jsonify({"message": "Không thể ẩn sự kiện. Vui lòng thử lại."}), 500
 
-        flash("An su kien thanh cong.", "success")
+        flash("Ẩn sự kiện thành công.", "success")
 
         return jsonify(
             {
-                "message": "An su kien thanh cong.",
+                "message": "Ẩn sự kiện thành công.",
                 "action": "cancelled",
                 "redirectUrl": url_for('main.index'),
             }
         )
 
-    return jsonify({"message": "Su kien o trang thai nay khong the xoa/an."}), 400
+    return jsonify({"message": "Sự kiện ở trạng thái này không thể xóa/ẩn."}), 400
 
 @event_bp.route("/events/<int:event_id>")
 def event_details(event_id: int):

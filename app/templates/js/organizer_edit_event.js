@@ -659,7 +659,7 @@ document.addEventListener("DOMContentLoaded", function () {
 				});
 			})
 			.catch(function () {
-				window.alert("Khong the tai anh de chinh sua. Vui long thu lai voi anh khac.");
+				window.alert("Không thể tải ảnh để chỉnh sửa. Vui lòng thử lại với ảnh khác.");
 				clearDraftImage();
 			});
 	}
@@ -705,7 +705,7 @@ document.addEventListener("DOMContentLoaded", function () {
 				clearDraftImage();
 			})
 			.catch(function () {
-				window.alert("Khong the luu anh da chinh sua. Vui long thu lai.");
+				window.alert("Không thể lưu ảnh đã chỉnh sửa. Vui lòng thử lại.");
 			})
 			.finally(function () {
 				isSavingImageEdit = false;
@@ -717,9 +717,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	function formatPrice(price) {
 		if (Number(price) <= 0) {
-			return "Mien phi";
+			return "Miễn phí";
 		}
-		return "Tu " + Number(price).toLocaleString("vi-VN") + "d";
+		return "Từ " + Number(price).toLocaleString("vi-VN") + "d";
 	}
 
 	function syncTicketJson() {
@@ -798,9 +798,9 @@ document.addEventListener("DOMContentLoaded", function () {
 				'<p class="ticket-item__title">' + ticket.name + "</p>" +
 				'<p class="ticket-item__meta">' +
 				formatPrice(ticket.price) +
-				" | So luong: " +
+				" | Số lượng: " +
 				ticket.quantity +
-				" | Ban tu: " +
+				" | Bán từ: " +
 				ticket.saleStart.replace("T", " ") +
 				"</p>" +
 				"</div>" +
@@ -853,7 +853,7 @@ document.addEventListener("DOMContentLoaded", function () {
 			}
 
 			if (!file.type || !file.type.startsWith("image/")) {
-				window.alert("Vui long chon file anh hop le.");
+				window.alert("Vui lòng chọn file ảnh hợp lệ.");
 				restoreCommittedUploadSelection();
 				return;
 			}
@@ -924,7 +924,7 @@ document.addEventListener("DOMContentLoaded", function () {
 					openEditorWithFile(loadedFile);
 				})
 				.catch(function () {
-					window.alert("Khong the tai anh hien tai de chinh sua. Vui long tai anh moi.");
+					window.alert("Không thể tải ảnh hiện tại để chỉnh sửa. Vui lòng tải ảnh mới.");
 				})
 				.finally(function () {
 					updateOpenImageEditorButtonState();
@@ -1013,19 +1013,19 @@ document.addEventListener("DOMContentLoaded", function () {
 		};
 
 		if (!payload.name) {
-			window.alert("Vui long nhap ten ve.");
+			window.alert("Vui lòng nhập tên vé.");
 			return;
 		}
 		if (!payload.saleStart || !payload.saleEnd) {
-			window.alert("Vui long chon day du thoi gian ban ve.");
+			window.alert("Vui lòng chọn đầy đủ thời gian bán vé.");
 			return;
 		}
 		if (!payload.isFree && !rawTicketPrice) {
-			window.alert("Vui long nhap gia ve.");
+			window.alert("Vui lòng nhập giá vé.");
 			return;
 		}
 		if (!rawTicketQuantity) {
-			window.alert("Vui long nhap tong so luong ve.");
+			window.alert("Vui lòng nhập tổng số lượng vé.");
 			return;
 		}
 		if (new Date(payload.saleEnd) < new Date(payload.saleStart)) {
@@ -1037,7 +1037,7 @@ document.addEventListener("DOMContentLoaded", function () {
 			return;
 		}
 		if (Number(payload.price) < 0) {
-			window.alert("Gia ve khong hop le.");
+			window.alert("Giá vé không hợp lệ.");
 			return;
 		}
 
@@ -1114,7 +1114,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		const eventTypeId = eventTypeSelect ? String(eventTypeSelect.value || "").trim() : "";
 		if (!eventTypeId) {
 			e.preventDefault();
-			window.alert("Vui lòng chon thể loại sự kiện.");
+			window.alert("Vui lòng chọn thể loại sự kiện.");
 			if (eventTypeSelect) {
 				eventTypeSelect.focus();
 			}

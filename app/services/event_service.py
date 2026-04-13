@@ -4,7 +4,7 @@ from ..models.ticket_type import TicketType
 from ..models.enums import EventStatus
 from .. import db
 from sqlalchemy import func, or_
-from datetime import datetime, time
+from datetime import datetime, time, timezone
 
 #lấy tất cả sự kiện
 def get_events():
@@ -17,14 +17,14 @@ def get_event_types(only_active: bool = True):
         query = query.filter(EventType.status.is_(True))
     return query.order_by(EventType.name.asc()).all()
 
-
+#lấy sự kiện để hiển thị ở trang chủ, có thể lọc theo nhiều tiêu chí khác nhau
 def _resolve_finished_status_for_db():
     finished_status = db.session.get(EventStatus, "FINISHED")
     if finished_status:
         return finished_status.status
     return None
 
-
+#đồng bộ trạng thái sự kiện đã kết thúc sang "FINISHED" nếu endTime đã qua
 def sync_expired_events_to_finished(now_time=None, event_id=None):
     target_finished_status = _resolve_finished_status_for_db()
     if target_finished_status is None:
@@ -142,20 +142,14 @@ def get_home_events(
   
 def get_event_by_id(event_id):
     sync_expired_events_to_finished(event_id=event_id)
-    return Event.query.get(event_id)
+    return db.session.get(Event, event_id)
 
 def _resolve_event_status(status):
     normalized_status = (status or "").strip().upper()
     if normalized_status:
-        status_candidates = {
-            "PUBLISHED": ["PUBLISHED", "APPROVED"],
-            "APPROVED": ["APPROVED", "PUBLISHED"],
-        }.get(normalized_status, [normalized_status])
-
-        for candidate in status_candidates:
-            status_row = db.session.get(EventStatus, candidate)
-            if status_row:
-                return status_row.status
+        status_row = db.session.get(EventStatus, normalized_status)
+        if status_row:
+            return status_row.status
 
     pending_status = db.session.get(EventStatus, "PENDING")
     if pending_status:
@@ -173,7 +167,7 @@ def create_event(data, commit=True):
         location=data.get("location"),
         startTime=data.get("startTime"),
         endTime=data.get("endTime"),
-        createdAt=data.get("createdAt") or datetime.utcnow(),
+        createdAt=data.get("createdAt") or datetime.now(timezone.utc).replace(tzinfo=None),
         publishedAt=data.get("publishedAt"),
         hasFaceReg=data.get("hasFaceReg"),
         limitQuantity=data.get("limitQuantity"),

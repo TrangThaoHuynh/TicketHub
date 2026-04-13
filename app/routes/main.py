@@ -110,4 +110,5 @@ def index():
         events=events,
         show_search=True,
         is_organizer=is_organizer,
+        header_show_manage_orders=False,
     )
