@@ -1,0 +1,118 @@
+.report-page {
+  padding: 20px 0 32px;
+  background: #f6f8fb;
+  min-height: calc(100vh - 120px);
+}
+
+.report-title {
+  text-align: center;
+  font-weight: 700;
+  color: #1677d8;
+  margin-bottom: 18px;
+  font-size: 30px;
+}
+
+.stat-card {
+  border: 0;
+  border-radius: 14px;
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(16, 24, 40, 0.08);
+}
+
+.stat-card .card-body {
+  min-height: 88px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stat-card .stat-number {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.stat-card .stat-label {
+  font-size: 15px;
+  opacity: 0.95;
+}
+
+.stat-icon {
+  font-size: 28px;
+}
+
+.stat-card.icon-card-1 {
+  background: linear-gradient(135deg, #2f80ed, #2572d6);
+}
+
+.stat-card.icon-card-2 {
+  background: linear-gradient(135deg, #35c4dc, #26b3cc);
+}
+
+.stat-card.icon-card-3 {
+  background: linear-gradient(135deg, #ead444, #d5c137);
+  color: #fff;
+}
+
+.report-panel {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(16, 24, 40, 0.08);
+  padding: 16px 18px;
+  margin-top: 18px;
+}
+
+.report-section-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: #212529;
+}
+
+.form-label {
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.form-control-sm,
+.form-select.form-control-sm {
+  min-height: 38px;
+  font-size: 14px;
+}
+
+.table thead th {
+  background: #16a4ee;
+  color: #fff;
+  border-color: #16a4ee;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 14px;
+  padding: 10px 8px;
+}
+
+.table tbody td {
+  vertical-align: middle;
+  font-size: 14px;
+  padding: 10px 8px;
+}
+
+.badge-soft {
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  align-items: end;
+}
+
+.filter-actions .btn {
+  min-width: 92px;
+}
+
+.report-table {
+  margin-top: 4px;
+}
