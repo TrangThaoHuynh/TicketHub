@@ -1,0 +1,219 @@
+{% extends "base.html" %} {% block styles %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('login.static', filename='css/admin_report.css') }}"
+/>
+{% endblock %} {% block content %} {% set selected_organizer_id =
+dashboard.filters.organizer_id %}
+
+<section class="report-page">
+  <div class="container">
+    <h1 class="dashboard-title">Báo cáo thống kê</h1>
+
+    <div class="row g-4 mb-2">
+      <div class="col-md-6">
+        <div class="card admin-card">
+          <div class="card-body">
+            <div class="icon-box">
+              <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <div>
+              <div class="metric-label">Tổng doanh thu</div>
+              <div class="metric-value">
+                {{ "{:,.0f}".format(dashboard.cards.total_revenue) }} VND
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card admin-card">
+          <div class="card-body">
+            <div class="icon-box">
+              <i class="fa-solid fa-ticket"></i>
+            </div>
+            <div>
+              <div class="metric-label">Tổng vé đã bán</div>
+              <div class="metric-value">
+                {{ dashboard.cards.total_tickets_sold }} vé
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="report-panel">
+      <div class="filter-title">Doanh thu theo thời gian</div>
+
+      <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label fw-semibold">Nhà tổ chức</label>
+          <select class="form-select" name="organizerId">
+            <option value="">Tất cả nhà tổ chức</option>
+            {% for organizer in dashboard.organizer_options %} {% if
+            selected_organizer_id == organizer.id %}
+            <option value="{{ organizer.id }}" selected>
+              {{ organizer.name }}
+            </option>
+            {% else %}
+            <option value="{{ organizer.id }}">{{ organizer.name }}</option>
+            {% endif %} {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Ngày bắt đầu</label>
+          <input
+            class="form-control"
+            type="date"
+            name="startDate"
+            value="{{ dashboard.filters.start_date }}"
+          />
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label fw-semibold">Ngày kết thúc</label>
+          <input
+            class="form-control"
+            type="date"
+            name="endDate"
+            value="{{ dashboard.filters.end_date }}"
+          />
+        </div>
+
+        <div class="col-md-2 d-flex gap-2">
+          <button type="submit" class="btn btn-primary w-100">Lọc</button>
+          <a
+            href="{{ url_for('reports.admin_reports') }}"
+            class="btn btn-outline-secondary w-100"
+          >
+            Reset
+          </a>
+        </div>
+      </form>
+    </div>
+
+    <div class="row g-4 mt-1">
+      <div class="col-lg-6">
+        <div class="chart-box">
+          <h5>Doanh thu theo thời gian</h5>
+          {% if dashboard.charts.time_revenue.labels %}
+          <div class="chart-scroll-wrapper">
+            <div class="chart-scroll-inner" id="timeRevenueChartWrap">
+              <canvas
+                id="timeRevenueChart"
+                height="300"
+                data-labels='{{ dashboard.charts.time_revenue["labels"] | tojson }}'
+                data-values='{{ dashboard.charts.time_revenue["values"] | tojson }}'
+              ></canvas>
+            </div>
+          </div>
+          {% else %}
+          <div class="alert alert-light border mb-0">
+            Chưa có dữ liệu biểu đồ doanh thu theo thời gian.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="col-lg-6">
+        <div class="chart-box">
+          <h5>Doanh thu theo sự kiện</h5>
+          {% if dashboard.charts.event_revenue.labels %}
+          <div class="chart-scroll-wrapper">
+            <div class="chart-scroll-inner" id="eventRevenueChartWrap">
+              <canvas
+                id="eventRevenueChart"
+                height="300"
+                data-labels='{{ dashboard.charts.event_revenue["labels"] | tojson }}'
+                data-values='{{ dashboard.charts.event_revenue["values"] | tojson }}'
+              ></canvas>
+            </div>
+          </div>
+          {% else %}
+          <div class="alert alert-light border mb-0">
+            Chưa có dữ liệu doanh thu theo sự kiện.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4 mt-1">
+      <div class="col-lg-4">
+        <div class="chart-box">
+          <h5>Đơn vé theo trạng thái</h5>
+          {% if dashboard.charts.booking_status.labels %}
+          <canvas
+            id="bookingStatusChart"
+            height="240"
+            data-labels='{{ dashboard.charts.booking_status["labels"] | tojson }}'
+            data-values='{{ dashboard.charts.booking_status["values"] | tojson }}'
+          ></canvas>
+          {% else %}
+          <div class="alert alert-light border mb-0">Không có dữ liệu.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="chart-box">
+          <h5>Sự kiện theo trạng thái</h5>
+          {% if dashboard.charts.event_status.labels %}
+          <canvas
+            id="eventStatusChart"
+            height="240"
+            data-labels='{{ dashboard.charts.event_status["labels"] | tojson }}'
+            data-values='{{ dashboard.charts.event_status["values"] | tojson }}'
+          ></canvas>
+          {% else %}
+          <div class="alert alert-light border mb-0">Không có dữ liệu.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="chart-box">
+          <h5>Vé theo trạng thái</h5>
+          {% if dashboard.charts.ticket_status.labels %}
+          <canvas
+            id="ticketStatusChart"
+            height="240"
+            data-labels='{{ dashboard.charts.ticket_status["labels"] | tojson }}'
+            data-values='{{ dashboard.charts.ticket_status["values"] | tojson }}'
+          ></canvas>
+          {% else %}
+          <div class="alert alert-light border mb-0">Không có dữ liệu.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="report-panel">
+      <div class="filter-title">Top sự kiện theo doanh thu</div>
+
+      {% if dashboard.event_revenue_rows %} {% for row in
+      dashboard.event_revenue_rows %}
+      <div class="event-list-item">
+        <div>
+          <div class="fw-semibold">{{ row.event_title }}</div>
+          <div class="text-muted small">
+            ID: {{ row.event_id }} • Vé đã bán: {{ row.sold_tickets }}
+          </div>
+        </div>
+        <div class="fw-bold text-primary">
+          {{ "{:,.0f}".format(row.revenue) }} VND
+        </div>
+      </div>
+      {% endfor %} {% else %}
+      <div class="alert alert-light border mb-0">Chưa có dữ liệu sự kiện.</div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %} {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('login.static', filename='js/admin_report.js') }}"></script>
+{% endblock %}

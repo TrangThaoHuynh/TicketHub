@@ -29,7 +29,6 @@ mail = Mail()
 oauth = OAuth()
 login_manager = LoginManager()
 
-
 def _seed_lookup_tables():
     from .models.enums import (
         AuthProvider,
@@ -41,11 +40,11 @@ def _seed_lookup_tables():
     )
 
     status_defaults = {
-        BookingStatus: ["PENDING"],
+        BookingStatus: ["PENDING", "SUCCESS", "FAILED"],
         OrganizerStatus: ["PENDING", "APPROVED", "REJECTED"],
-        PaymentStatus: ["PENDING", "SUCCESS", "FAILED"],
-        TicketStatus: ["PENDING", "ACTIVE", "USED", "CANCELLED"],
-        EventStatus: ["DRAFT", "PUBLISHED", "CANCELLED"],
+        PaymentStatus: ["SUCCESS", "FAILED"],
+        TicketStatus: ["PENDING", "VALID", "USED", "CANCELLED"],
+        EventStatus: ["PENDING", "PUBLISHED", "FINISHED", "CANCELLED"],
     }
 
     changed = False
@@ -91,13 +90,14 @@ def create_app():
     from .routes.main import main
     from .routes.organizer_orders import organizer_bp
     from .routes.order import orders_bp
-
+    from .routes.report_routes import report_bp
 
     app.register_blueprint(event_bp)
     app.register_blueprint(login_bp)
     app.register_blueprint(main)
     app.register_blueprint(organizer_bp)
     app.register_blueprint(orders_bp)
+    app.register_blueprint(report_bp)
     if app.config.get("DB_AUTO_INIT", True):
         try:
             _bootstrap_database(app)
