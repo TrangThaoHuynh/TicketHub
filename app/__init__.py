@@ -114,11 +114,31 @@ def create_app():
         
     @app.context_processor
     def inject_user():
-        from .models.user import User
-        
+        from .models.user import User, Admin, Organizer, Customer
+
+        # Mặc định chưa có user đăng nhập
         user = None
+
+        # Cờ kiểm tra role để dùng trong template
+        is_admin = False
+        is_organizer = False
+        is_customer = False
+
+        # Nếu session có user_id thì lấy user hiện tại
         if 'user_id' in session:
             user = User.query.get(session['user_id'])
-        return dict(current_user=user)
 
+            # Nếu tìm thấy user thì kiểm tra user thuộc role nào
+            if user:
+                is_admin = Admin.query.get(user.id) is not None
+                is_organizer = Organizer.query.get(user.id) is not None
+                is_customer = Customer.query.get(user.id) is not None
+
+        # Trả biến ra toàn bộ template
+        return dict(
+            current_user=user,
+            is_admin=is_admin,
+            is_organizer=is_organizer,
+            is_customer=is_customer,
+        )
     return app
