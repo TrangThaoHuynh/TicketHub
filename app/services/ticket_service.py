@@ -142,7 +142,7 @@ def ensure_ticket_qr_token(ticket: Ticket):
     payload = {
         "ver": 1,
         "ticket_id": ticket.id,
-        "ticket_code": ticket.ticketCode,
+        "ticket_code": ticket.ticketCode or ticket.id,
         "event_id": event_id,
         "customer_id": ticket.customerId,
         "booking_id": ticket.bookingId,
