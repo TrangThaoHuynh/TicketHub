@@ -117,7 +117,8 @@
       <div class="ticket-actions">
         {% if current_user %}
         {% if header_show_manage_orders %}
-        <a class="ticket-manage-orders-link" href="#" aria-label="Quản lý đơn mua">
+        <a class="ticket-manage-orders-link" href="{{ url_for('organizer.organizer_event_orders', event_id=event.id) }}"
+ aria-label="Quản lý đơn mua">
           <i class="fa-solid fa-receipt"></i>
           <span>Quản lý đơn mua</span>
         </a>
