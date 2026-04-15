@@ -41,11 +41,11 @@ def _seed_lookup_tables():
     )
 
     status_defaults = {
-        BookingStatus: ["PENDING"],
+        BookingStatus: ["PENDING", "SUCCESS", "FAILED"],
         OrganizerStatus: ["PENDING", "APPROVED", "REJECTED"],
-        PaymentStatus: ["PENDING", "SUCCESS", "FAILED"],
-        TicketStatus: ["PENDING", "ACTIVE", "USED", "CANCELLED"],
-        EventStatus: ["DRAFT", "PUBLISHED", "CANCELLED"],
+        PaymentStatus: ["SUCCESS", "FAILED"],
+        TicketStatus: ["PENDING", "VALID", "USED", "CANCELLED"],
+        EventStatus: ["PENDING", "PUBLISHED", "CANCELLED", "FINISHED"],
     }
 
     changed = False
