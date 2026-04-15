@@ -1,13 +1,8 @@
-# app/services/report_service.py
-
 from __future__ import annotations
-
 from collections import defaultdict
 from datetime import datetime
 from typing import Any
-
 from sqlalchemy import func, or_
-
 from .. import db
 from ..models.booking import Booking
 from ..models.event import Event
@@ -17,7 +12,6 @@ from ..models.ticket_type import TicketType
 from ..models.user import Organizer, User
 
 
-# Booking/Payment nào coi là đã thanh toán
 PAID_BOOKING_STATUSES = {"success"}
 PAID_PAYMENT_STATUSES = {"success"}
 
@@ -26,7 +20,6 @@ def _to_float(value: Any) -> float:
     if value is None:
         return 0.0
     return float(value)
-
 
 def _paid_condition():
     """
@@ -38,7 +31,6 @@ def _paid_condition():
         func.lower(func.coalesce(Payment.status, "")).in_(list(PAID_PAYMENT_STATUSES)),
     )
 
-
 def _period_label(dt: datetime | None, group_by: str) -> str:
     """
     Đổi ngày tháng thành nhãn để vẽ chart
@@ -49,27 +41,21 @@ def _period_label(dt: datetime | None, group_by: str) -> str:
         return dt.strftime("%m/%Y")
     return dt.strftime("%d/%m")
 
-
 def _event_state(event: Event) -> tuple[str, str]:
     """
     Xác định trạng thái hiển thị của event + màu badge bootstrap tương ứng
     """
     status = (event.status or "").upper()
     now = datetime.now()
-
-    # Nếu sự kiện bị hủy
     if status == "CANCELLED":
         return "Đã hủy", "danger"
 
-    # Nếu sự kiện đã kết thúc
     if status == "FINISHED":
         return "Đã kết thúc", "secondary"
 
-    # Nếu sự kiện chưa được duyệt
     if status == "PENDING":
         return "Chờ duyệt", "dark"
 
-    # Nếu sự kiện đã được duyệt, kiểm tra thời gian
     if status == "PUBLISHED":
         if event.startTime and event.endTime:
             # Kiểm tra: đang diễn ra hay chưa bắt đầu hay đã kết thúc
@@ -80,10 +66,7 @@ def _event_state(event: Event) -> tuple[str, str]:
             if now > event.endTime:
                 return "Đã kết thúc", "secondary"
         return "Đã xuất bản", "info"
-
-    # Trạng thái không xác định
     return "Chưa xác định", "dark"
-
 
 def _build_event_capacity_map(event_ids: list[int]) -> dict[int, int]:
     """
@@ -259,17 +242,13 @@ def _apply_common_scope(query, organizer_id=None, start_date=None, end_date=None
     """
     Thêm các filter chung vào query admin (lọc theo organizer, ngày)
     """
-    # Nếu có organizer_id → thêm điều kiện WHERE
     if organizer_id:
         query = query.filter(Event.organizerId == organizer_id)
-    # Nếu có start_date → chỉ lấy booking sau ngày này
     if start_date:
         query = query.filter(Booking.createdAt >= start_date)
-    # Nếu có end_date → chỉ lấy booking trước ngày này
     if end_date:
         query = query.filter(Booking.createdAt <= end_date)
     return query
-
 
 def _build_status_payload(counter: dict[str, int], mapping: dict[str, str]) -> dict[str, list]:
     """
@@ -290,9 +269,7 @@ def _build_status_payload(counter: dict[str, int], mapping: dict[str, str]) -> d
         "values": values,  # [800, 50, 10]
     }
 
-
 # ============ HÀM LẤY DỮ LIỆU DASHBOARD CHO ADMIN ============
-
 def get_admin_report_dashboard(
     organizer_id: int | None = None,
     start_date: datetime | None = None,
@@ -304,18 +281,15 @@ def get_admin_report_dashboard(
     """
     # Chuẩn hóa group_by
     group_by = "month" if group_by == "month" else "day"
-
-    # ========== Lấy danh sách organizer cho dropdown lọc ==========
     organizer_options = (
         db.session.query(
-            Organizer.id.label("id"),  # ID organizer
-            User.name.label("name"),  # Tên organizer
+            Organizer.id.label("id"),  
+            User.name.label("name"),  
         )
-        .join(User, User.id == Organizer.id)  # Nối bảng User
-        .order_by(User.name.asc(), Organizer.id.asc())  # Sắp xếp theo tên
+        .join(User, User.id == Organizer.id) 
+        .order_by(User.name.asc(), Organizer.id.asc())  
         .all()
     )
-
     # ==========  Tính tổng doanh thu + tổng vé đã bán ==========
     summary_query = (
         db.session.query(
@@ -350,7 +324,6 @@ def get_admin_report_dashboard(
         .filter(_paid_condition())
         .order_by(Booking.createdAt.asc())
     )
-    # Áp dụng các filter
     time_query = _apply_common_scope(time_query, organizer_id, start_date, end_date)
 
     # Gom doanh thu theo ngày/tháng
@@ -481,8 +454,6 @@ def get_admin_report_dashboard(
         "USED": "Đã dùng",
         "CANCELLED": "Đã hủy"
     }
-
-    # ==========  Trả dữ liệu cho template admin ==========
     return {
         "filters": {
             "organizer_id": organizer_id,  # Organizer được chọn

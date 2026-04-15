@@ -3,9 +3,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const dataEl = document.getElementById("organizer-chart-data");
 
   if (!canvas || !dataEl) return;
-
   let chartData = { labels: [], values: [] };
-
   try {
     chartData = JSON.parse(dataEl.textContent || "{}");
   } catch (error) {
@@ -17,9 +15,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const values = Array.isArray(chartData.values) ? chartData.values : [];
 
   if (!labels.length) return;
-
   const ctx = canvas.getContext("2d");
-
   new Chart(ctx, {
     type: "bar",
     data: {

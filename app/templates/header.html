@@ -6,81 +6,149 @@
         <span>TicketHub</span>
       </a>
 
-      {% block header_search %}
-      {% if show_search %}
+      {% block header_search %} {% if show_search %}
       <div class="ticket-searchbar desktop-only">
-        <form class="ticket-search" action="{{ url_for('main.index') }}" method="get">
-          <input type="text" name="keyword" value="{{ request.args.get('keyword', '') }}"
-            placeholder="Bạn tìm gì hôm nay?" />
+        <form
+          class="ticket-search"
+          action="{{ url_for('main.index') }}"
+          method="get"
+        >
+          <input
+            type="text"
+            name="keyword"
+            value="{{ request.args.get('keyword', '') }}"
+            placeholder="Bạn tìm gì hôm nay?"
+          />
+
           {% if request.args.get('eventTypeId') %}
-          <input type="hidden" name="eventTypeId" value="{{ request.args.get('eventTypeId') }}" />
+          <input
+            type="hidden"
+            name="eventTypeId"
+            value="{{ request.args.get('eventTypeId') }}"
+          />
+          {% endif %} {% if request.args.get('startDate') %}
+          <input
+            type="hidden"
+            name="startDate"
+            value="{{ request.args.get('startDate') }}"
+          />
+          {% endif %} {% if request.args.get('endDate') %}
+          <input
+            type="hidden"
+            name="endDate"
+            value="{{ request.args.get('endDate') }}"
+          />
+          {% endif %} {% if request.args.get('location') %}
+          <input
+            type="hidden"
+            name="location"
+            value="{{ request.args.get('location') }}"
+          />
+          {% endif %} {% if request.args.get('priceMin') %}
+          <input
+            type="hidden"
+            name="priceMin"
+            value="{{ request.args.get('priceMin') }}"
+          />
+          {% endif %} {% if request.args.get('priceMax') %}
+          <input
+            type="hidden"
+            name="priceMax"
+            value="{{ request.args.get('priceMax') }}"
+          />
           {% endif %}
-          {% if request.args.get('startDate') %}
-          <input type="hidden" name="startDate" value="{{ request.args.get('startDate') }}" />
-          {% endif %}
-          {% if request.args.get('endDate') %}
-          <input type="hidden" name="endDate" value="{{ request.args.get('endDate') }}" />
-          {% endif %}
-          {% if request.args.get('location') %}
-          <input type="hidden" name="location" value="{{ request.args.get('location') }}" />
-          {% endif %}
-          {% if request.args.get('priceMin') %}
-          <input type="hidden" name="priceMin" value="{{ request.args.get('priceMin') }}" />
-          {% endif %}
-          {% if request.args.get('priceMax') %}
-          <input type="hidden" name="priceMax" value="{{ request.args.get('priceMax') }}" />
-          {% endif %}
+
           <button type="submit" aria-label="Tìm kiếm">Tìm kiếm</button>
         </form>
 
         <div class="ticket-filter-wrap">
-          <button type="button" class="ticket-filter-btn" id="ticketFilterBtnDesktop" aria-haspopup="dialog"
-            aria-expanded="false">
+          <button
+            type="button"
+            class="ticket-filter-btn"
+            id="ticketFilterBtnDesktop"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+          >
             Bộ lọc
           </button>
 
-          <div class="ticket-filter-panel is-hidden" id="ticketFilterPanelDesktop" role="dialog" aria-label="Bộ lọc">
+          <div
+            class="ticket-filter-panel is-hidden"
+            id="ticketFilterPanelDesktop"
+            role="dialog"
+            aria-label="Bộ lọc"
+          >
             <form action="{{ url_for('main.index') }}" method="get">
-              <input type="hidden" name="keyword" value="{{ request.args.get('keyword', '') }}" />
+              <input
+                type="hidden"
+                name="keyword"
+                value="{{ request.args.get('keyword', '') }}"
+              />
 
               <div class="ticket-filter-panel__grid">
                 <div class="row g-3">
                   <div class="col-12 col-md-6">
-                    <label class="form-label" for="filterStartDateDesktop">Ngày bắt đầu</label>
+                    <label class="form-label" for="filterStartDateDesktop">
+                      Ngày bắt đầu
+                    </label>
                     <div class="input-group">
-                      <input id="filterStartDateDesktop" type="date" class="form-control" name="startDate"
-                        value="{{ request.args.get('startDate', '') }}" />
+                      <input
+                        id="filterStartDateDesktop"
+                        type="date"
+                        class="form-control"
+                        name="startDate"
+                        value="{{ request.args.get('startDate', '') }}"
+                      />
                     </div>
                   </div>
 
                   <div class="col-12 col-md-6">
-                    <label class="form-label" for="filterEndDateDesktop">Ngày kết thúc</label>
+                    <label class="form-label" for="filterEndDateDesktop">
+                      Ngày kết thúc
+                    </label>
                     <div class="input-group">
-                      <input id="filterEndDateDesktop" type="date" class="form-control" name="endDate"
-                        value="{{ request.args.get('endDate', '') }}" />
+                      <input
+                        id="filterEndDateDesktop"
+                        type="date"
+                        class="form-control"
+                        name="endDate"
+                        value="{{ request.args.get('endDate', '') }}"
+                      />
                     </div>
                   </div>
 
                   <div class="col-12 col-md-6">
-                    <label class="form-label" for="filterEventTypeDesktop">Danh mục</label>
-                    <select id="filterEventTypeDesktop" class="form-select" name="eventTypeId">
-                      {% set selected_type = request.args.get('eventTypeId', '') %}
-                      <option value="" {% if not selected_type %}selected{% endif %}>Tất cả</option>
-                      {% if header_event_types is defined and header_event_types %}
-                      {% for t in header_event_types %}
-                      <option value="{{ t.id }}" {% if selected_type and (selected_type|int==t.id) %}selected{% endif
-                        %}>
+                    <label class="form-label" for="filterEventTypeDesktop">
+                      Danh mục
+                    </label>
+                    <select
+                      id="filterEventTypeDesktop"
+                      class="form-select"
+                      name="eventTypeId"
+                      data-selected-type="{{ request.args.get('eventTypeId', '') }}"
+                    >
+                      <option value="">Tất cả</option>
+                      {% if header_event_types is defined and header_event_types
+                      %} {% for t in header_event_types %}
+                      <option value="{{ t.id }}">
                         {{ t.name or ('Loại ' ~ t.id) }}
                       </option>
-                      {% endfor %}
-                      {% endif %}
+                      {% endfor %} {% endif %}
                     </select>
                   </div>
 
                   <div class="col-12 col-md-6">
-                    <label class="form-label" for="filterLocationDesktop">Địa điểm</label>
-                    <input id="filterLocationDesktop" type="text" class="form-control" name="location"
-                      value="{{ request.args.get('location', '') }}" placeholder="Nhập địa điểm" />
+                    <label class="form-label" for="filterLocationDesktop">
+                      Địa điểm
+                    </label>
+                    <input
+                      id="filterLocationDesktop"
+                      type="text"
+                      class="form-control"
+                      name="location"
+                      value="{{ request.args.get('location', '') }}"
+                      placeholder="Nhập địa điểm"
+                    />
                   </div>
 
                   <div class="col-12">
@@ -88,15 +156,42 @@
                       <div class="ticket-filter-price__title">Khoảng giá</div>
                       <div class="ticket-filter-price__fields">
                         <div>
-                          <label class="form-label" for="filterPriceMinDesktop">Từ</label>
-                          <input id="filterPriceMinDesktop" type="number" min="0" step="50000" class="form-control"
-                            name="priceMin" value="{{ request.args.get('priceMin', '') }}" placeholder="0" />
+                          <label class="form-label" for="filterPriceMinDesktop">
+                            Từ
+                          </label>
+                          <input
+                            id="filterPriceMinDesktop"
+                            type="number"
+                            min="0"
+                            step="50000"
+                            class="form-control"
+                            name="priceMin"
+                            value="{{ request.args.get('priceMin', '') }}"
+                            placeholder="0"
+                          />
                         </div>
-                        <div class="ticket-filter-price__dash" aria-hidden="true">-</div>
+
+                        <div
+                          class="ticket-filter-price__dash"
+                          aria-hidden="true"
+                        >
+                          -
+                        </div>
+
                         <div>
-                          <label class="form-label" for="filterPriceMaxDesktop">Đến</label>
-                          <input id="filterPriceMaxDesktop" type="number" min="0" step="50000" class="form-control"
-                            name="priceMax" value="{{ request.args.get('priceMax', '') }}" placeholder="1.000.000" />
+                          <label class="form-label" for="filterPriceMaxDesktop">
+                            Đến
+                          </label>
+                          <input
+                            id="filterPriceMaxDesktop"
+                            type="number"
+                            min="0"
+                            step="50000"
+                            class="form-control"
+                            name="priceMax"
+                            value="{{ request.args.get('priceMax', '') }}"
+                            placeholder="1.000.000"
+                          />
                         </div>
                       </div>
                     </div>
@@ -106,54 +201,99 @@
 
               <div class="ticket-filter-panel__actions">
                 <button type="submit" class="btn btn-primary">Áp dụng</button>
-                <button type="button" class="btn btn-outline-secondary js-ticket-filter-close">Đóng</button>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary js-ticket-filter-close"
+                >
+                  Đóng
+                </button>
               </div>
             </form>
           </div>
         </div>
       </div>
-      {% endif %}
-      {% endblock %}
+      {% endif %} {% endblock %}
+
       <div class="ticket-actions">
-        {% if current_user %}
-        {% if header_show_manage_orders %}
-        <a class="ticket-manage-orders-link" href="#" aria-label="Quản lý đơn mua">
+        {% if current_user %} {% if header_show_manage_orders %}
+        <a
+          class="ticket-manage-orders-link"
+          href="#"
+          aria-label="Quản lý đơn mua"
+        >
           <i class="fa-solid fa-receipt"></i>
           <span>Quản lý đơn mua</span>
         </a>
-        {% endif %}
-
-        {% if header_show_create_event %}
-        <a class="ticket-create-event-btn" href="{{ url_for('event.organizer_create_event') }}" aria-label="Tạo sự kiện">
+        {% endif %} {% if header_show_create_event %}
+        <a
+          class="ticket-create-event-btn"
+          href="{{ url_for('event.organizer_create_event') }}"
+          aria-label="Tạo sự kiện"
+        >
           <i class="fa-solid fa-plus"></i>
           <span>Tạo sự kiện</span>
         </a>
         {% endif %}
 
         <div class="dropdown">
-          <a class="ticket-actions-link dropdown-toggle d-flex align-items-center gap-2" href="#" role="button"
-            data-bs-toggle="dropdown" aria-expanded="false">
-
-            <img src="{{ current_user.avatar or 'https://via.placeholder.com/32' }}" alt="Avatar"
-              class="ticket-avatar" />
-
+          <a
+            class="ticket-actions-link dropdown-toggle d-flex align-items-center gap-2"
+            href="#"
+            role="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+          >
+            <img
+              src="{{ current_user.avatar or 'https://via.placeholder.com/32' }}"
+              alt="Avatar"
+              class="ticket-avatar"
+            />
             <span>{{ current_user.name or current_user.username }}</span>
           </a>
 
           <ul class="dropdown-menu dropdown-menu-end">
             <li>
-              <a class="dropdown-item" href="{{ url_for('main.account_settings') }}">
+              <a
+                class="dropdown-item"
+                href="{{ url_for('main.account_settings') }}"
+              >
                 <i class="fa fa-user me-2"></i>Cài đặt tài khoản
               </a>
             </li>
+
+            {% if is_organizer %}
             <li>
-              <a class="dropdown-item" href="{{ url_for('orders.my_tickets') }}">
+              <a
+                class="dropdown-item"
+                href="{{ url_for('reports.organizer_reports') }}"
+              >
+                <i class="fa-solid fa-chart-column me-2"></i>Thống kê báo cáo
+              </a>
+            </li>
+            {% endif %} {% if is_customer %}
+            <li>
+              <a
+                class="dropdown-item"
+                href="{{ url_for('orders.my_tickets') }}"
+              >
                 <i class="fa fa-ticket me-2"></i>Vé của tôi
               </a>
             </li>
+            {% endif %} {% if is_admin %}
             <li>
-              <hr class="dropdown-divider">
+              <a
+                class="dropdown-item"
+                href="{{ url_for('reports.admin_reports') }}"
+              >
+                <i class="fa-solid fa-chart-line me-2"></i>Thống kê hệ thống
+              </a>
             </li>
+            {% endif %}
+
+            <li>
+              <hr class="dropdown-divider" />
+            </li>
+
             <li>
               <a class="dropdown-item" href="{{ url_for('login.logout') }}">
                 <i class="fa fa-sign-out-alt me-2"></i>Đăng xuất
@@ -161,10 +301,13 @@
             </li>
           </ul>
         </div>
-
         {% else %}
-        <a href="{{ url_for('login.login') }}"> <i class="fas fa-user me-1"></i>Đăng nhập</a>
-        <a href="{{ url_for('login.signup') }}"> <i class="fas fa-user-plus me-1"></i>Đăng ký</a>
+        <a href="{{ url_for('login.login') }}">
+          <i class="fas fa-user me-1"></i>Đăng nhập
+        </a>
+        <a href="{{ url_for('login.signup') }}">
+          <i class="fas fa-user-plus me-1"></i>Đăng ký
+        </a>
         {% endif %}
       </div>
     </div>
@@ -172,78 +315,147 @@
     {% if show_search %}
     <div class="ticket-mobile-search">
       <div class="ticket-searchbar">
-        <form class="ticket-search" action="{{ url_for('main.index') }}" method="get">
-          <input type="text" name="keyword" value="{{ request.args.get('keyword', '') }}"
-            placeholder="Bạn tìm gì hôm nay?" />
+        <form
+          class="ticket-search"
+          action="{{ url_for('main.index') }}"
+          method="get"
+        >
+          <input
+            type="text"
+            name="keyword"
+            value="{{ request.args.get('keyword', '') }}"
+            placeholder="Bạn tìm gì hôm nay?"
+          />
+
           {% if request.args.get('eventTypeId') %}
-          <input type="hidden" name="eventTypeId" value="{{ request.args.get('eventTypeId') }}" />
+          <input
+            type="hidden"
+            name="eventTypeId"
+            value="{{ request.args.get('eventTypeId') }}"
+          />
+          {% endif %} {% if request.args.get('startDate') %}
+          <input
+            type="hidden"
+            name="startDate"
+            value="{{ request.args.get('startDate') }}"
+          />
+          {% endif %} {% if request.args.get('endDate') %}
+          <input
+            type="hidden"
+            name="endDate"
+            value="{{ request.args.get('endDate') }}"
+          />
+          {% endif %} {% if request.args.get('location') %}
+          <input
+            type="hidden"
+            name="location"
+            value="{{ request.args.get('location') }}"
+          />
+          {% endif %} {% if request.args.get('priceMin') %}
+          <input
+            type="hidden"
+            name="priceMin"
+            value="{{ request.args.get('priceMin') }}"
+          />
+          {% endif %} {% if request.args.get('priceMax') %}
+          <input
+            type="hidden"
+            name="priceMax"
+            value="{{ request.args.get('priceMax') }}"
+          />
           {% endif %}
-          {% if request.args.get('startDate') %}
-          <input type="hidden" name="startDate" value="{{ request.args.get('startDate') }}" />
-          {% endif %}
-          {% if request.args.get('endDate') %}
-          <input type="hidden" name="endDate" value="{{ request.args.get('endDate') }}" />
-          {% endif %}
-          {% if request.args.get('location') %}
-          <input type="hidden" name="location" value="{{ request.args.get('location') }}" />
-          {% endif %}
-          {% if request.args.get('priceMin') %}
-          <input type="hidden" name="priceMin" value="{{ request.args.get('priceMin') }}" />
-          {% endif %}
-          {% if request.args.get('priceMax') %}
-          <input type="hidden" name="priceMax" value="{{ request.args.get('priceMax') }}" />
-          {% endif %}
+
           <button type="submit" aria-label="Tìm kiếm">Tìm kiếm</button>
         </form>
 
         <div class="ticket-filter-wrap">
-          <button type="button" class="ticket-filter-btn" id="ticketFilterBtnMobile" aria-haspopup="dialog"
-            aria-expanded="false">
+          <button
+            type="button"
+            class="ticket-filter-btn"
+            id="ticketFilterBtnMobile"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+          >
             Bộ lọc
           </button>
 
-          <div class="ticket-filter-panel is-hidden" id="ticketFilterPanelMobile" role="dialog" aria-label="Bộ lọc">
+          <div
+            class="ticket-filter-panel is-hidden"
+            id="ticketFilterPanelMobile"
+            role="dialog"
+            aria-label="Bộ lọc"
+          >
             <form action="{{ url_for('main.index') }}" method="get">
-              <input type="hidden" name="keyword" value="{{ request.args.get('keyword', '') }}" />
+              <input
+                type="hidden"
+                name="keyword"
+                value="{{ request.args.get('keyword', '') }}"
+              />
 
               <div class="ticket-filter-panel__grid">
                 <div class="row g-3">
                   <div class="col-12 col-md-6">
-                    <label class="form-label" for="filterStartDateMobile">Ngày bắt đầu</label>
+                    <label class="form-label" for="filterStartDateMobile">
+                      Ngày bắt đầu
+                    </label>
                     <div class="input-group">
-                      <input id="filterStartDateMobile" type="date" class="form-control" name="startDate"
-                        value="{{ request.args.get('startDate', '') }}" />
+                      <input
+                        id="filterStartDateMobile"
+                        type="date"
+                        class="form-control"
+                        name="startDate"
+                        value="{{ request.args.get('startDate', '') }}"
+                      />
                     </div>
                   </div>
 
                   <div class="col-12 col-md-6">
-                    <label class="form-label" for="filterEndDateMobile">Ngày kết thúc</label>
+                    <label class="form-label" for="filterEndDateMobile">
+                      Ngày kết thúc
+                    </label>
                     <div class="input-group">
-                      <input id="filterEndDateMobile" type="date" class="form-control" name="endDate"
-                        value="{{ request.args.get('endDate', '') }}" />
+                      <input
+                        id="filterEndDateMobile"
+                        type="date"
+                        class="form-control"
+                        name="endDate"
+                        value="{{ request.args.get('endDate', '') }}"
+                      />
                     </div>
                   </div>
 
                   <div class="col-12 col-md-6">
-                    <label class="form-label" for="filterEventTypeMobile">Danh mục</label>
-                    <select id="filterEventTypeMobile" class="form-select" name="eventTypeId">
-                      {% set selected_type = request.args.get('eventTypeId', '') %}
-                      <option value="" {% if not selected_type %}selected{% endif %}>Tất cả</option>
-                      {% if header_event_types is defined and header_event_types %}
-                      {% for t in header_event_types %}
-                      <option value="{{ t.id }}" {% if selected_type and (selected_type|int==t.id) %}selected{% endif
-                        %}>
+                    <label class="form-label" for="filterEventTypeMobile">
+                      Danh mục
+                    </label>
+                    <select
+                      id="filterEventTypeMobile"
+                      class="form-select"
+                      name="eventTypeId"
+                      data-selected-type="{{ request.args.get('eventTypeId', '') }}"
+                    >
+                      <option value="">Tất cả</option>
+                      {% if header_event_types is defined and header_event_types
+                      %} {% for t in header_event_types %}
+                      <option value="{{ t.id }}">
                         {{ t.name or ('Loại ' ~ t.id) }}
                       </option>
-                      {% endfor %}
-                      {% endif %}
+                      {% endfor %} {% endif %}
                     </select>
                   </div>
 
                   <div class="col-12 col-md-6">
-                    <label class="form-label" for="filterLocationMobile">Địa điểm</label>
-                    <input id="filterLocationMobile" type="text" class="form-control" name="location"
-                      value="{{ request.args.get('location', '') }}" placeholder="Nhập địa điểm" />
+                    <label class="form-label" for="filterLocationMobile">
+                      Địa điểm
+                    </label>
+                    <input
+                      id="filterLocationMobile"
+                      type="text"
+                      class="form-control"
+                      name="location"
+                      value="{{ request.args.get('location', '') }}"
+                      placeholder="Nhập địa điểm"
+                    />
                   </div>
 
                   <div class="col-12">
@@ -251,15 +463,42 @@
                       <div class="ticket-filter-price__title">Khoảng giá</div>
                       <div class="ticket-filter-price__fields">
                         <div>
-                          <label class="form-label" for="filterPriceMinMobile">Từ</label>
-                          <input id="filterPriceMinMobile" type="number" min="0" step="50000" class="form-control"
-                            name="priceMin" value="{{ request.args.get('priceMin', '') }}" placeholder="0" />
+                          <label class="form-label" for="filterPriceMinMobile">
+                            Từ
+                          </label>
+                          <input
+                            id="filterPriceMinMobile"
+                            type="number"
+                            min="0"
+                            step="50000"
+                            class="form-control"
+                            name="priceMin"
+                            value="{{ request.args.get('priceMin', '') }}"
+                            placeholder="0"
+                          />
                         </div>
-                        <div class="ticket-filter-price__dash" aria-hidden="true">-</div>
+
+                        <div
+                          class="ticket-filter-price__dash"
+                          aria-hidden="true"
+                        >
+                          -
+                        </div>
+
                         <div>
-                          <label class="form-label" for="filterPriceMaxMobile">Đến</label>
-                          <input id="filterPriceMaxMobile" type="number" min="0" step="50000" class="form-control"
-                            name="priceMax" value="{{ request.args.get('priceMax', '') }}" placeholder="1.000.000" />
+                          <label class="form-label" for="filterPriceMaxMobile">
+                            Đến
+                          </label>
+                          <input
+                            id="filterPriceMaxMobile"
+                            type="number"
+                            min="0"
+                            step="50000"
+                            class="form-control"
+                            name="priceMax"
+                            value="{{ request.args.get('priceMax', '') }}"
+                            placeholder="1.000.000"
+                          />
                         </div>
                       </div>
                     </div>
@@ -269,7 +508,12 @@
 
               <div class="ticket-filter-panel__actions">
                 <button type="submit" class="btn btn-primary">Áp dụng</button>
-                <button type="button" class="btn btn-outline-secondary js-ticket-filter-close">Đóng</button>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary js-ticket-filter-close"
+                >
+                  Đóng
+                </button>
               </div>
             </form>
           </div>
