@@ -196,7 +196,7 @@ def booking_detail(booking_id: int):
             )
 
         total_amount = float(booking.totalAmount) if booking.totalAmount is not None else total
-        booking_code = f"KAN{booking.id:06d}"
+        booking_code = str(booking.id)
 
         return render_template(
             'my_ticket_order_detail.html',

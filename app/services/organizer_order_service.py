@@ -52,7 +52,7 @@ def _format_dt(dt: Any) -> str:
 
 
 def _order_code(booking_id: int) -> str:
-    return f"DH{booking_id:06d}"
+    return str(booking_id)
 
 
 def get_organizer_event(organizer_id: int, event_id: int) -> Event | None:
