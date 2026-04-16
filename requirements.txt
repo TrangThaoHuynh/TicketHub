@@ -11,3 +11,4 @@ dotenv==1.2.2
 flask_login==0.6.3
 qrcode==8.2
 Pillow==12.2.0
+Flask-Admin==2.0.2

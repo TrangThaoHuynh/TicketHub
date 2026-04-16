@@ -1,0 +1,103 @@
+{% extends 'admin/master.html' %}
+
+{% block head_css %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('login.static', filename='css/admin_organizer_approval.css') }}" />
+{% endblock %}
+
+{% block body %}
+<div class="organizer-approval-page">
+    <h2 class="organizer-approval-title">Duyệt nhà tổ chức</h2>
+
+    <div class="organizer-approval-toolbar">
+        <div class="oa-search">
+            <input type="text" placeholder="Nhập từ khóa cần tìm kiếm" value="{{ filters.q }}" disabled />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+        </div>
+
+        <div class="oa-filter" aria-disabled="true">
+            <span class="oa-filter-left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <path d="M22 3H2l8 10v7l4 2v-9l8-10z"></path>
+                </svg>
+                <span>Tất cả</span>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
+    </div>
+
+    <div class="oa-table-wrap">
+        <table class="table oa-table">
+            <thead>
+                <tr>
+                    <th style="width: 26%">Tên</th>
+                    <th style="width: 16%">Tên tài khoản</th>
+                    <th style="width: 22%">Email</th>
+                    <th style="width: 14%">Số điện thoại</th>
+                    <th style="width: 12%">Trạng thái</th>
+                    <th style="width: 10%; text-align: right">Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                {% set status_key = row.status %}
+                {% if status_key == 'APPROVED' %}
+                {% set status_text = 'Đã duyệt' %}
+                {% set status_class = 'approved' %}
+                {% elif status_key == 'REJECTED' %}
+                {% set status_text = 'Đã từ chối' %}
+                {% set status_class = 'rejected' %}
+                {% else %}
+                {% set status_text = 'Đang chờ' %}
+                {% set status_class = 'pending' %}
+                {% endif %}
+
+                <tr>
+                    <td>{{ row.name }}</td>
+                    <td>{{ row.username }}</td>
+                    <td>{{ row.email }}</td>
+                    <td>{{ row.phone }}</td>
+                    <td><span class="oa-status {{ status_class }}">{{ status_text }}</span></td>
+                    <td>
+                        <div class="oa-actions">
+                            {% if status_key == 'REJECTED' %}
+                            <button class="oa-btn approve" type="button" disabled>Duyệt</button>
+                            {% elif status_key == 'APPROVED' %}
+                            <button class="oa-btn reject" type="button" disabled>Từ chối</button>
+                            {% else %}
+                            <button class="oa-btn approve" type="button" disabled>Duyệt</button>
+                            <button class="oa-btn reject" type="button" disabled>Từ chối</button>
+                            {% endif %}
+
+                            <button class="oa-detail" type="button" title="Xem chi tiết" disabled>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="oa-pagination" aria-label="Phân trang">
+        <button class="oa-page-btn" type="button" disabled aria-label="Trang trước">◀</button>
+        <div class="oa-page-num">1</div>
+        <button class="oa-page-btn" type="button" disabled aria-label="Trang sau">▶</button>
+    </div>
+</div>
+{% endblock %}
