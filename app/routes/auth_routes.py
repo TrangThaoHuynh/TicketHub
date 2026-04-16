@@ -1,4 +1,5 @@
 import smtplib
+from urllib.parse import urlparse
 
 from flask import (
     Blueprint,
@@ -26,6 +27,8 @@ from ..services import (
     reset_password_by_user_id,
     verify_forgot_password_code,
 )
+
+from ..models.user import Admin as AdminRole
 
 login_bp = Blueprint(
     'login',
@@ -69,6 +72,20 @@ def _build_smtp_auth_error_message(exc):
         message = f'{message} Detail: {smtp_error}'
 
     return message
+
+
+def _safe_next_path(next_value: str | None) -> str | None:
+    if not next_value:
+        return None
+    next_value = str(next_value).strip()
+    if not next_value:
+        return None
+    parsed = urlparse(next_value)
+    if parsed.scheme or parsed.netloc:
+        return None
+    if not next_value.startswith("/"):
+        return None
+    return next_value
 
 
 def _validate_mail_settings():
@@ -225,6 +242,8 @@ def login_google_callback():
 
     session.pop(GOOGLE_ROLE_SESSION_KEY, None)
     flash('Đăng nhập Google thành công.', 'success')
+    if AdminRole.query.get(user.id) is not None:
+        return redirect(url_for('admin.index'))
     return redirect(url_for('main.index'))
 
 @login_bp.route('/login/google/choose-role', methods=['GET', 'POST'])
@@ -275,6 +294,14 @@ def login():
         session['user_id'] = user.id
         session['username'] = user.username
         flash('Đăng nhập thành công.', 'success')
+
+        next_path = _safe_next_path(request.args.get('next')) or _safe_next_path(request.form.get('next'))
+        if next_path:
+            return redirect(next_path)
+
+        if AdminRole.query.get(user.id) is not None:
+            return redirect(url_for('admin.index'))
+
         return redirect(url_for('main.index'))
 
     return render_template('login.html')
