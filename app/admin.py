@@ -32,6 +32,8 @@ def _is_admin() -> bool:
 
 
 class SecureAdminIndexView(AdminIndexView):
+    extra_css = ["/static/css/admin_theme.css"]
+
     def is_accessible(self) -> bool:
         return _is_admin()
 
@@ -40,6 +42,8 @@ class SecureAdminIndexView(AdminIndexView):
 
 
 class SecureModelView(ModelView):
+    extra_css = ["/static/css/admin_theme.css"]
+
     def is_accessible(self) -> bool:
         return _is_admin()
 
@@ -53,7 +57,194 @@ class ReadOnlyModelView(SecureModelView):
     can_delete = False
 
 
+class BookingAdminView(ReadOnlyModelView):
+    column_list = [
+        "id",
+        "createdAt",
+        "status",
+        "customerId",
+        "totalAmount",
+        "tickets",
+        "payments",
+    ]
+
+    column_labels = {
+        "id": "ID",
+        "createdAt": "Thời gian đặt",
+        "status": "Trạng thái",
+        "customerId": "Khách hàng",
+        "totalAmount": "Tổng tiền",
+        "tickets": "Số vé",
+        "payments": "Thanh toán",
+    }
+
+    column_default_sort = ("id", True)
+    can_view_details = True
+
+    column_filters = [
+        "status",
+        "customerId",
+        "createdAt",
+        "totalAmount",
+    ]
+
+    column_searchable_list = [
+        "id",
+        "customerId",
+    ]
+
+    def _fmt_dt(self, value):
+        if value is None:
+            return "—"
+        try:
+            return value.strftime("%d/%m/%Y %H:%M")
+        except Exception:
+            return str(value)
+
+    def _fmt_money(self, value):
+        if value is None:
+            return "—"
+        try:
+            return f"{float(value):,.0f}".replace(",", ".") + " đ"
+        except Exception:
+            return str(value)
+
+    def _fmt_customer(self, customer_id):
+        if not customer_id:
+            return "—"
+
+        try:
+            customer_id_int = int(customer_id)
+        except (TypeError, ValueError):
+            return str(customer_id)
+
+        user = User.query.get(customer_id_int)
+        if not user:
+            return str(customer_id)
+
+        name = user.name or user.username or "—"
+        email = user.email or "—"
+        phone = user.phoneNumber or "—"
+        return f"{customer_id_int} • {name} • {phone} • {email}"
+
+    def _ticket_count(self, booking_id: int) -> int:
+        return int(db.session.query(func.count(Ticket.id)).filter(Ticket.bookingId == booking_id).scalar() or 0)
+
+    def _payment_summary(self, booking_id: int) -> str:
+        last_payment = (
+            Payment.query
+            .filter(Payment.bookingId == booking_id)
+            .order_by(Payment.id.desc())
+            .first()
+        )
+        count = int(db.session.query(func.count(Payment.id)).filter(Payment.bookingId == booking_id).scalar() or 0)
+        if not last_payment:
+            return f"0 giao dịch"
+        status = getattr(last_payment, "status", None) or "—"
+        amount = self._fmt_money(getattr(last_payment, "amount", None))
+        tx = getattr(last_payment, "transactionID", None) or ""
+        tx_short = (tx[:10] + "…") if len(tx) > 11 else tx
+        return f"{count} giao dịch • {status} • {amount}" + (f" • {tx_short}" if tx_short else "")
+
+    column_formatters = {
+        "createdAt": lambda v, _c, m, _p: v._fmt_dt(getattr(m, "createdAt", None)),
+        "totalAmount": lambda v, _c, m, _p: v._fmt_money(getattr(m, "totalAmount", None)),
+        "customerId": lambda v, _c, m, _p: v._fmt_customer(getattr(m, "customerId", None)),
+        "tickets": lambda v, _c, m, _p: f"{v._ticket_count(int(getattr(m, 'id', 0) or 0))} vé",
+        "payments": lambda v, _c, m, _p: v._payment_summary(int(getattr(m, 'id', 0) or 0)),
+    }
+
+
+class PaymentAdminView(ReadOnlyModelView):
+    column_list = [
+        "id",
+        "bookingId",
+        "status",
+        "amount",
+        "transactionID",
+        "booking",
+    ]
+
+    column_labels = {
+        "id": "ID",
+        "bookingId": "Đơn mua",
+        "status": "Trạng thái",
+        "amount": "Số tiền",
+        "transactionID": "Mã giao dịch",
+        "booking": "Thông tin đơn",
+    }
+
+    column_default_sort = ("id", True)
+    can_view_details = True
+
+    column_filters = [
+        "status",
+        "bookingId",
+        "amount",
+    ]
+
+    column_searchable_list = [
+        "transactionID",
+        "bookingId",
+        "status",
+    ]
+
+    def _fmt_money(self, value):
+        if value is None:
+            return "—"
+        try:
+            return f"{float(value):,.0f}".replace(",", ".") + " đ"
+        except Exception:
+            return str(value)
+
+    def _fmt_booking_id(self, payment: Payment) -> str:
+        booking_id = getattr(payment, "bookingId", None)
+        if not booking_id:
+            return "—"
+
+        booking = getattr(payment, "booking", None)
+        if booking is None:
+            return str(booking_id)
+
+        customer_id = getattr(booking, "customerId", None)
+        user = None
+        if customer_id is not None:
+            try:
+                user = User.query.get(int(customer_id))
+            except (TypeError, ValueError):
+                user = None
+
+        name = (user.name or user.username) if user else (str(customer_id) if customer_id else "—")
+        phone = (user.phoneNumber or "—") if user else "—"
+        return f"{booking_id} • {name} • {phone}"
+
+    def _fmt_booking(self, booking: Booking | None):
+        if booking is None:
+            return "—"
+
+        created_at = getattr(booking, "createdAt", None)
+        created_txt = "—"
+        if created_at is not None:
+            try:
+                created_txt = created_at.strftime("%d/%m/%Y %H:%M")
+            except Exception:
+                created_txt = str(created_at)
+
+        status = getattr(booking, "status", None) or "—"
+        total_txt = self._fmt_money(getattr(booking, "totalAmount", None))
+        return f"{created_txt} • {status} • {total_txt}"
+
+    column_formatters = {
+        "amount": lambda v, _c, m, _p: v._fmt_money(getattr(m, "amount", None)),
+        "bookingId": lambda v, _c, m, _p: v._fmt_booking_id(m),
+        "booking": lambda v, _c, m, _p: v._fmt_booking(getattr(m, "booking", None)),
+        "transactionID": lambda v, _c, m, _p: ((getattr(m, "transactionID", None) or "—")[:64] + ("…" if getattr(m, "transactionID", None) and len(getattr(m, "transactionID")) > 64 else "")),
+    }
+
+
 class AdminReportsView(BaseView):
+    extra_css = ["/static/css/admin_theme.css"]
+
     @expose("/")
     def index(self):
         return redirect(url_for("reports.admin_reports"))
@@ -66,6 +257,8 @@ class AdminReportsView(BaseView):
 
 
 class AdminLogoutView(BaseView):
+    extra_css = ["/static/css/admin_theme.css"]
+
     @expose("/")
     def index(self):
         return redirect(url_for("login.logout"))
@@ -205,6 +398,9 @@ class TicketAdminView(ReadOnlyModelView):
 
 
 class AdminDashboardIndexView(SecureAdminIndexView):
+    def is_visible(self):
+        return False
+
     @expose("/")
     def index(self):
         stats = {
@@ -286,8 +482,8 @@ def init_admin(app):
     admin.add_view(SecureModelView(EventType, db.session, name="Thể loại sự kiện", endpoint="admin_event_types"))
     admin.add_view(SecureModelView(TicketType, db.session, name="Loại vé", endpoint="admin_ticket_types"))
 
-    admin.add_view(ReadOnlyModelView(Booking, db.session, name="Đơn mua", endpoint="admin_bookings"))
-    admin.add_view(ReadOnlyModelView(Payment, db.session, name="Thanh toán", endpoint="admin_payments"))
+    admin.add_view(BookingAdminView(Booking, db.session, name="Đơn mua", endpoint="admin_bookings"))
+    admin.add_view(PaymentAdminView(Payment, db.session, name="Thanh toán", endpoint="admin_payments"))
     admin.add_view(TicketAdminView(Ticket, db.session, name="Vé", endpoint="admin_tickets"))
 
     admin.add_view(AdminReportsView(name="Thống kê", endpoint="reports_admin"))
