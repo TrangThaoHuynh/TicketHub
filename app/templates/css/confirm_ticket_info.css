@@ -1,0 +1,474 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Sora:wght@600;700&display=swap');
+
+.confirm-page {
+	--surface-bg: linear-gradient(140deg, #eef4ff 0%, #f6f9ff 45%, #ecf2f9 100%);
+	--card-bg: #ffffff;
+	--primary: #1f73d8;
+	--primary-dark: #1157ab;
+	--text-main: #1b2431;
+	--text-soft: #66758d;
+	--line: #d8e1ef;
+	--line-strong: #c4d2e8;
+	--success: #28a745;
+	--danger: #dc3545;
+	min-height: calc(100vh - 148px);
+	padding: 26px 0 34px;
+	background: var(--surface-bg);
+	font-family: 'Be Vietnam Pro', sans-serif;
+	font-size: 15px;
+	line-height: 1.45;
+}
+
+.confirm-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(290px, 326px);
+	gap: 24px;
+	align-items: start;
+}
+
+.confirm-form-panel,
+.confirm-summary-panel {
+	background: var(--card-bg);
+	border: 1px solid var(--line);
+	border-radius: 12px;
+	box-shadow: 0 6px 20px rgba(31, 77, 140, 0.14);
+}
+
+.confirm-form-panel {
+	padding: 20px 20px 10px;
+}
+
+.confirm-form-head {
+	margin-bottom: 14px;
+}
+
+.confirm-back {
+	color: var(--primary);
+	text-decoration: none;
+	font-weight: 600;
+	font-size: 0.86rem;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.confirm-back:hover {
+	color: var(--primary-dark);
+}
+
+.confirm-form-head h2 {
+	margin: 0;
+	text-align: center;
+	color: var(--primary);
+	font-family: 'Sora', sans-serif;
+	font-size: 1.72rem;
+	font-weight: 700;
+	letter-spacing: 0.2px;
+}
+
+.confirm-form-head p {
+	margin: 8px 0 0;
+	text-align: center;
+	color: var(--text-soft);
+	font-size: 0.84rem;
+}
+
+.ticket-accordion {
+	border: 1px solid var(--line-strong);
+	border-bottom: none;
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.ticket-group {
+	border-bottom: 1px solid var(--line-strong);
+	background: #fbfdff;
+}
+
+.ticket-group__header {
+	width: 100%;
+	border: none;
+	background: #edf4ff;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 11px 14px;
+	cursor: pointer;
+	color: #2f456a;
+	font-weight: 600;
+}
+
+.ticket-group__header i {
+	transition: transform 0.2s ease;
+}
+
+.ticket-group__title {
+	display: grid;
+	gap: 2px;
+	text-align: left;
+}
+
+.ticket-group__title span {
+	font-size: 0.95rem;
+	color: #374e76;
+}
+
+.ticket-group__title small {
+	color: var(--text-soft);
+	font-size: 0.76rem;
+	font-weight: 500;
+}
+
+.ticket-group__body {
+	display: none;
+	background: #fdfefe;
+	padding: 12px 12px 8px;
+}
+
+.ticket-group.is-open .ticket-group__body {
+	display: block;
+}
+
+.ticket-group.is-open .ticket-group__header i {
+	transform: rotate(180deg);
+}
+
+.ticket-holder {
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	padding: 12px;
+	background: #ffffff;
+}
+
+.ticket-holder + .ticket-holder {
+	margin-top: 12px;
+}
+
+.ticket-holder__label {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 2px 9px;
+	border-radius: 100px;
+	background: #edf4ff;
+	color: #325183;
+	font-size: 0.74rem;
+	font-weight: 600;
+	margin-bottom: 10px;
+}
+
+.ticket-holder__grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px 14px;
+	align-items: start;
+}
+
+.field-group {
+	display: grid;
+	gap: 5px;
+}
+
+.field-group--full {
+	grid-column: 1 / -1;
+}
+
+.field-group label {
+	color: #2f3f58;
+	font-weight: 600;
+	font-size: 0.88rem;
+}
+
+.input-with-icon {
+	position: relative;
+	width: 100%;
+}
+
+.input-with-icon input,
+.field-group input[type='tel'] {
+	width: 100%;
+	border: 1px solid #c8d4e6;
+	border-radius: 8px;
+	padding: 8px 10px;
+	font-size: 0.9rem;
+	min-height: 42px;
+	background: #ffffff;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field-group input[type='file'] {
+	width: 100%;
+	border: 1px solid #c8d4e6;
+	border-radius: 8px;
+	padding: 7px 10px;
+	font-size: 0.86rem;
+	min-height: 42px;
+	background: #ffffff;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input-with-icon input {
+	padding-right: 36px;
+}
+
+.input-with-icon input::placeholder,
+.field-group input[type='tel']::placeholder {
+	color: #6f7f99;
+}
+
+.input-with-icon input:focus,
+.field-group input[type='tel']:focus,
+.field-group input[type='file']:focus {
+	outline: none;
+	border-color: #8aa9d6;
+	box-shadow: 0 0 0 3px rgba(31, 115, 216, 0.15);
+}
+
+.input-with-icon input.is-valid,
+.field-group input[type='tel'].is-valid,
+.field-group input[type='file'].is-valid {
+	border-color: rgba(40, 167, 69, 0.7);
+}
+
+.field-group input.is-invalid {
+	border-color: rgba(220, 53, 69, 0.75);
+}
+
+.field-valid-icon {
+	position: absolute;
+	right: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: var(--success);
+	opacity: 0;
+	transition: opacity 0.15s ease;
+}
+
+.input-with-icon input.is-valid + .field-valid-icon {
+	opacity: 1;
+}
+
+.name-helper {
+	font-size: 0.74rem;
+	color: var(--success);
+	opacity: 0;
+	min-height: 14px;
+	transition: opacity 0.15s ease;
+}
+
+.phone-helper {
+	color: #3b8f59;
+}
+
+.name-helper.is-visible {
+	opacity: 1;
+}
+
+.confirm-empty {
+	padding: 20px;
+	border: 1px dashed #b8c8df;
+	border-radius: 8px;
+	text-align: center;
+	background: #f8fbff;
+}
+
+.confirm-empty h4 {
+	margin: 0;
+	font-size: 1.02rem;
+	color: #2e4d78;
+}
+
+.confirm-empty p {
+	margin: 10px 0 0;
+	color: var(--text-soft);
+	font-size: 0.88rem;
+}
+
+.empty-back-link {
+	margin-top: 14px;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	text-decoration: none;
+	color: #0f5cb8;
+	font-weight: 600;
+	font-size: 0.88rem;
+}
+
+.confirm-summary-panel {
+	padding: 16px 14px 14px;
+	position: sticky;
+	top: 90px;
+}
+
+.confirm-summary-panel h3 {
+	text-align: center;
+	color: var(--primary);
+	font-family: 'Sora', sans-serif;
+	font-size: 1.58rem;
+	margin: 2px 0 16px;
+}
+
+.summary-head {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	color: var(--primary);
+	font-weight: 700;
+	font-size: 0.92rem;
+	margin-bottom: 6px;
+}
+
+.summary-list {
+	margin-bottom: 12px;
+}
+
+.summary-item {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 6px;
+	padding: 7px 0 9px;
+	border-bottom: 1px dashed #8a99ae;
+}
+
+.summary-item__name {
+	color: #2e3643;
+	font-weight: 500;
+	font-size: 0.9rem;
+}
+
+.summary-item__price {
+	color: #2e3643;
+	font-size: 0.9rem;
+}
+
+.summary-item__qty,
+.summary-item__subtotal {
+	text-align: right;
+	color: #2e3643;
+	font-size: 0.9rem;
+}
+
+.summary-item__subtotal {
+	font-weight: 500;
+}
+
+.summary-empty {
+	color: var(--text-soft);
+	margin: 4px 0 2px;
+	font-size: 0.86rem;
+}
+
+.summary-total {
+	display: flex;
+	justify-content: space-between;
+	align-items: end;
+	margin-top: 8px;
+	color: #2a3342;
+}
+
+.summary-total span {
+	font-weight: 700;
+	display: block;
+	font-size: 0.97rem;
+}
+
+.summary-total small {
+	color: var(--text-soft);
+	font-size: 0.8rem;
+}
+
+.summary-total strong {
+	font-size: 1.58rem;
+	font-family: 'Sora', sans-serif;
+	color: #1f2839;
+}
+
+.payment-hint {
+	color: #57657d;
+	margin: 12px 0 8px;
+	font-size: 0.86rem;
+}
+
+.payment-hint.is-valid {
+	color: var(--success);
+}
+
+.pay-button {
+	width: 100%;
+	border: 1px solid #8eb1df;
+	border-radius: 11px;
+	background: #2a7cd4;
+	color: #ffffff;
+	padding: 9px 12px;
+	font-size: 1rem;
+	font-weight: 600;
+	display: inline-flex;
+	justify-content: center;
+	align-items: center;
+	gap: 10px;
+	transition: transform 0.15s ease, background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.pay-button:disabled {
+	opacity: 0.62;
+	cursor: not-allowed;
+}
+
+.pay-button:not(:disabled):hover {
+	transform: translateY(-1px);
+	background: #1f70c7;
+}
+
+@media (max-width: 991.98px) {
+	.confirm-layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.confirm-summary-panel {
+		position: static;
+	}
+}
+
+@media (max-width: 767.98px) {
+	.confirm-page {
+		padding: 18px 0 22px;
+	}
+
+	.confirm-form-panel,
+	.confirm-summary-panel {
+		border-radius: 10px;
+	}
+
+	.confirm-form-panel {
+		padding: 16px 14px 10px;
+	}
+
+	.confirm-form-head h2 {
+		font-size: 1.36rem;
+	}
+
+	.ticket-group__header {
+		padding: 10px 11px;
+	}
+
+	.ticket-group__body {
+		padding: 10px 10px 6px;
+	}
+
+	.ticket-holder__grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.field-group--full {
+		grid-column: auto;
+	}
+
+	.confirm-summary-panel h3 {
+		font-size: 1.34rem;
+	}
+
+	.summary-total strong {
+		font-size: 1.26rem;
+	}
+}

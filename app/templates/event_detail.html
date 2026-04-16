@@ -90,7 +90,7 @@
 
             {% if ticket_types|length == 0 %}
             <div class="alert alert-light mb-0"
-              style="backg: rgba(148, 163, 255, 0.1); color: #94a3ff; border: 1px solid rgba(148, 163, 255, 0.2);">
+              style="background: rgba(148, 163, 255, 0.1); color: #94a3ff; border: 1px solid rgba(148, 163, 255, 0.2);">
               Hiện chưa có loại vé.
             </div>
             {% else %}
@@ -111,13 +111,14 @@
                   </div>
 
                   <div class="input-group input-group-sm mt-1">
-                    <button class="btn btn-outline-secondary" type="button"
-                      onclick="changeQty('{{ t.id }}', -1, {{ t.remaining|int }})">−</button>
+                    <button class="btn btn-outline-secondary qty-btn" type="button" data-ticket-id="{{ t.id }}"
+                      data-delta="-1" data-max="{{ t.remaining|int }}">−</button>
                     <input class="form-control text-center qty-input" id="qty-{{ t.id }}" type="number" min="0"
-                      max="{{ t.remaining|int }}" value="0" data-price="{{ t.price or 0 }}" {{ 'disabled' if
-                      t.remaining|int==0 }}>
-                    <button class="btn btn-outline-secondary" type="button"
-                      onclick="changeQty('{{ t.id }}', 1, {{ t.remaining|int }})">+</button>
+                      max="{{ t.remaining|int }}" value="0" data-ticket-id="{{ t.id }}"
+                      data-ticket-name="{{ t.name }}" data-ticket-description="{{ t.description or '' }}"
+                      data-price="{{ t.price or 0 }}" {{ 'disabled' if t.remaining|int == 0 }}>
+                    <button class="btn btn-outline-secondary qty-btn" type="button" data-ticket-id="{{ t.id }}"
+                      data-delta="1" data-max="{{ t.remaining|int }}">+</button>
                   </div>
                 </div>
               </div>
@@ -130,7 +131,8 @@
             </div>
 
             <button id="btnSubmit" class="btn btn-success w-100 mt-3" type="button" disabled
-              onclick="alert('Chức năng đặt vé sẽ được bổ sung sau')">
+              data-event-id="{{ event.id }}" data-event-title="{{ event.title }}"
+              data-confirm-url="{{ url_for('event.confirm_ticket_info', event_id=event.id) }}">
               <i class="fas fa-shopping-cart me-2"></i>Mua vé
             </button>
             {% endif %}
