@@ -17,7 +17,7 @@ def get_ticket_types_by_event_id(event_id: int):
     return TicketType.query.filter_by(eventId=event_id).all()
 
 
-# Đếm số lượng vé đã bán theo ticket type
+# Đếm số lượng vé đã bán / đã dùng theo ticket type
 def count_sold_by_ticket_type(ticket_type_ids: list[int]) -> dict[int, int]:
     if not ticket_type_ids:
         return {}
@@ -26,56 +26,40 @@ def count_sold_by_ticket_type(ticket_type_ids: list[int]) -> dict[int, int]:
         db.session.query(Ticket.ticketTypeId, func.count(Ticket.id))
         .filter(
             Ticket.ticketTypeId.in_(ticket_type_ids),
-            Ticket.status.in_(["VALID", "USED"])
-            # Nếu DB local của bạn vẫn còn dữ liệu cũ ACTIVE thì tạm dùng:
-            # Ticket.status.in_(["ACTIVE", "VALID", "USED"])
+            Ticket.status.in_(["ACTIVE", "USED", "VALID"])
         )
         .group_by(Ticket.ticketTypeId)
         .all()
     )
-
     return {ticket_type_id: count for ticket_type_id, count in rows}
 
 
-# Lấy vé của người dùng
-def get_tickets_of_user(
-    user_id: int,
-    q: str = "",
-    status: str | None = None,
-    page: int = 1,
-    per_page: int = 12
-):
+# Lấy danh sách vé của người dùng
+def get_tickets_of_user(user_id: int, q: str = "", status: str = None, page: int = 1, per_page: int = 12):
     query = (
-        Ticket.query
+        db.session.query(Ticket)
         .filter(Ticket.customerId == user_id)
         .order_by(Ticket.createdAt.desc())
     )
 
     if q:
         like_q = f"%{q.strip()}%"
-
-        matching_ticket_type_ids = (
-            db.session.query(TicketType.id)
-            .filter(TicketType.name.ilike(like_q))
+        matching_ticket_type_ids = db.session.query(TicketType.id).filter(
+            TicketType.name.ilike(like_q)
         )
-
-        matching_event_ids = (
-            db.session.query(Event.id)
-            .filter(Event.title.ilike(like_q))
+        matching_event_ids = db.session.query(Event.id).filter(
+            Event.title.ilike(like_q)
         )
-
-        matching_ticket_type_ids_by_event = (
-            db.session.query(TicketType.id)
-            .filter(TicketType.eventId.in_(matching_event_ids))
+        matching_ticket_type_ids_by_event = db.session.query(TicketType.id).filter(
+            TicketType.eventId.in_(matching_event_ids)
         )
 
         query = query.filter(
             or_(
                 Ticket.ticketCode.ilike(like_q),
                 Ticket.fullName.ilike(like_q),
-                Ticket.phoneNumber.ilike(like_q),
                 Ticket.ticketTypeId.in_(matching_ticket_type_ids),
-                Ticket.ticketTypeId.in_(matching_ticket_type_ids_by_event),
+                Ticket.ticketTypeId.in_(matching_ticket_type_ids_by_event)
             )
         )
 
@@ -99,7 +83,6 @@ def save_ticket_qr(ticket: Ticket, qr_code: str):
     db.session.commit()
 
 
-# Đánh dấu vé đã dùng
 def mark_checked_in(ticket: Ticket):
     ticket.status = "USED"
     ticket.checkedIn = datetime.utcnow()
@@ -142,7 +125,7 @@ def ensure_ticket_qr_token(ticket: Ticket):
     payload = {
         "ver": 1,
         "ticket_id": ticket.id,
-        "ticket_code": ticket.ticketCode or ticket.id,
+        "ticket_code": ticket.ticketCode,
         "event_id": event_id,
         "customer_id": ticket.customerId,
         "booking_id": ticket.bookingId,

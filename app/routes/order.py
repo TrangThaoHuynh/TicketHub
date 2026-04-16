@@ -1,6 +1,9 @@
-from flask import Blueprint, render_template, abort, send_file, request, url_for
+from flask import Blueprint, render_template, abort, send_file, request, jsonify
+from ..models.booking import Booking
+from ..services.ticket_email_service import send_ticket_email_by_booking
 from flask_login import login_required, current_user
 from io import BytesIO
+import uuid
 from sqlalchemy import func
 from sqlalchemy.exc import ProgrammingError
 
@@ -11,12 +14,15 @@ from ..models.ticket import Ticket
 from ..models.ticket_type import TicketType
 from ..models.event import Event
 from ..services.ticket_service import (
+    count_sold_by_ticket_type,
     ensure_ticket_qr_token,
     build_ticket_qr_png,
 )
-
 orders_bp = Blueprint('orders', __name__, url_prefix='/orders')
 
+def _gen_ticket_code():
+    """Tạo mã vé duy nhất"""
+    return f"TKT-{uuid.uuid4().hex[:12].upper()}"
 
 @orders_bp.route("/ticket/<ticket_id>")
 @login_required
@@ -33,8 +39,7 @@ def ticket_detail(ticket_id):
     t.event = Event.query.get(t.ticket_type.eventId) if t.ticket_type else None
 
     ensure_ticket_qr_token(t)
-    return render_template("ticket_detail.html", t=t, show_search=False)
-
+    return render_template("ticket_detail.html", t=t)
 
 @orders_bp.route("/ticket/<ticket_id>/qr.png")
 @login_required
