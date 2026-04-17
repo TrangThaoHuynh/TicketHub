@@ -92,6 +92,7 @@ def create_app():
     from .routes.organizer_orders import organizer_bp
     from .routes.order import orders_bp
     from .routes.report_routes import report_bp
+    from .admin import init_admin
 
     app.register_blueprint(event_bp)
     app.register_blueprint(login_bp)
@@ -99,6 +100,9 @@ def create_app():
     app.register_blueprint(organizer_bp)
     app.register_blueprint(orders_bp)
     app.register_blueprint(report_bp)
+
+    # Flask-Admin (/admin)
+    init_admin(app)
     if app.config.get("DB_AUTO_INIT", True):
         try:
             _bootstrap_database(app)
