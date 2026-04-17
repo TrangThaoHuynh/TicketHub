@@ -15,18 +15,14 @@
             {% set _tickets = tickets if tickets is defined and tickets else None %}
             {% set _booker = booker if booker is defined and booker else None %}
 
-            {% set order_code = (_order.code if _order and _order.code is defined else (_order.id if _order else
-            'DH001')) %}
-            {% set created_at = (_order.created_at if _order and _order.created_at is defined else '14/04/2026') %}
-            {% set payment_method = (_order.payment_method if _order and _order.payment_method is defined else 'VNPAY')
-            %}
+            {% set order_code = (_order.code if _order and _order.code is defined else (_order.id if _order else '—')) %}
+            {% set created_at = (_order.created_at if _order and _order.created_at is defined else '—') %}
+            {% set payment_method = (_order.payment_method if _order and _order.payment_method is defined else '—') %}
             {% set status_value = ((_order.status if _order and _order.status is defined else 'paid')|string|lower) %}
 
-            {% set event_title = (_event.title if _event and _event.title is defined else 'Sự kiện A') %}
-            {% set event_time = (_event.time_text if _event and _event.time_text is defined else '20:00 - 22/04/2026')
-            %}
-            {% set event_location = (_event.location if _event and _event.location is defined else 'Nhà văn hóa thanh
-            niên TP. Hồ Chí Minh') %}
+            {% set event_title = (_event.title if _event and _event.title is defined else '—') %}
+            {% set event_time = (_event.time_text if _event and _event.time_text is defined else '—') %}
+            {% set event_location = (_event.location if _event and _event.location is defined else '—') %}
 
             <div class="order-detail-body">
                 <section class="info-section" aria-label="Thông tin đơn">

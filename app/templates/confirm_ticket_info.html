@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('main.static', filename='css/confirm_ticket_info.css') }}">
+{% endblock %}
+
+{% block content %}
+<section
+	class="confirm-page"
+	id="confirmTicketPage"
+	data-event-id="{{ event.id }}"
+	data-event-title="{{ event.title }}"
+	data-require-face="{{ 1 if event.hasFaceReg else 0 }}"
+	data-event-detail-url="{{ url_for('event.event_details', event_id=event.id) }}"
+>
+	<div class="container confirm-layout">
+		<div class="confirm-form-panel">
+			<div class="confirm-form-head">
+				<a class="confirm-back" href="{{ url_for('event.event_details', event_id=event.id) }}">
+					<i class="fa-solid fa-arrow-left-long"></i>
+					Quay lại chọn vé
+				</a>
+				<h2>Nhập thông tin vé</h2>
+				<p>{{ event.title }}</p>
+			</div>
+
+			<div id="confirmEmptyState" class="confirm-empty d-none">
+				<h4>Bạn chưa chọn vé</h4>
+				<p>Vui lòng quay lại trang chi tiết sự kiện để chọn loại vé và số lượng.</p>
+				<a href="{{ url_for('event.event_details', event_id=event.id) }}" class="empty-back-link">
+					Chọn vé ngay
+				</a>
+			</div>
+
+			<div id="ticketAccordion" class="ticket-accordion"></div>
+		</div>
+
+		<aside class="confirm-summary-panel">
+			<h3>Chi tiết vé đặt</h3>
+
+			<div class="summary-head">
+				<span>Loại vé</span>
+				<span>Số lượng</span>
+			</div>
+
+			<div id="summaryList" class="summary-list"></div>
+
+			<div class="summary-total">
+				<div>
+					<span>Tạm tính</span>
+					<small id="totalTicketCount">0 vé</small>
+				</div>
+				<strong id="summarySubtotal">0 đ</strong>
+			</div>
+
+			<p id="paymentHint" class="payment-hint">Vui lòng nhập thông tin vé trước khi thanh toán</p>
+
+			<button id="payButton" class="pay-button" type="button" disabled>
+				Thanh toán
+				<i class="fa-solid fa-arrow-right-long"></i>
+			</button>
+		</aside>
+	</div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script id="confirmTicketTypesData" type="application/json">{{ ticket_types_payload | tojson }}</script>
+<script src="{{ url_for('main.static', filename='js/confirm_ticket_info.js') }}"></script>
+{% endblock %}
