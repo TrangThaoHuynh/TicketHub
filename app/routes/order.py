@@ -1,10 +1,11 @@
-from flask import Blueprint, render_template, abort, send_file, request, jsonify
+from flask import Blueprint, render_template, abort, send_file, request, jsonify, url_for
 from ..models.booking import Booking
 from ..services.ticket_email_service import send_ticket_email_by_booking
 from flask_login import login_required, current_user
 from io import BytesIO
 import uuid
 from sqlalchemy import func
+from sqlalchemy.orm import aliased
 from sqlalchemy.exc import ProgrammingError
 
 from .. import db
@@ -38,8 +39,25 @@ def ticket_detail(ticket_id):
     t.ticket_type = TicketType.query.get(t.ticketTypeId)
     t.event = Event.query.get(t.ticket_type.eventId) if t.ticket_type else None
 
-    ensure_ticket_qr_token(t)
-    return render_template("ticket_detail.html", t=t)
+    booking = db.session.get(Booking, t.bookingId) if t.bookingId else None
+    payment = (
+        Payment.query.filter_by(bookingId=t.bookingId)
+        .order_by(Payment.id.desc())
+        .first()
+    ) if t.bookingId else None
+
+    booking_status = str(getattr(booking, "status", "") or "").upper()
+    payment_status = str(getattr(payment, "status", "") or "").upper()
+    show_qr = (
+        (booking_status == "SUCCESS" or payment_status == "SUCCESS")
+        and booking_status != "FAILED"
+        and payment_status != "FAILED"
+    )
+
+    if show_qr:
+        ensure_ticket_qr_token(t)
+
+    return render_template("ticket_detail.html", t=t, show_qr=show_qr)
 
 @orders_bp.route("/ticket/<ticket_id>/qr.png")
 @login_required
@@ -50,6 +68,24 @@ def ticket_qr_image(ticket_id):
         abort(404)
 
     if t.customerId != current_user.id:
+        abort(403)
+
+    booking = db.session.get(Booking, t.bookingId) if t.bookingId else None
+    payment = (
+        Payment.query.filter_by(bookingId=t.bookingId)
+        .order_by(Payment.id.desc())
+        .first()
+    ) if t.bookingId else None
+
+    booking_status = str(getattr(booking, "status", "") or "").upper()
+    payment_status = str(getattr(payment, "status", "") or "").upper()
+    show_qr = (
+        (booking_status == "SUCCESS" or payment_status == "SUCCESS")
+        and booking_status != "FAILED"
+        and payment_status != "FAILED"
+    )
+
+    if not show_qr:
         abort(403)
 
     png_bytes = build_ticket_qr_png(t)
@@ -67,6 +103,17 @@ def my_tickets():
     try:
         total_amount_expr = func.coalesce(Booking.totalAmount, func.sum(Ticket.price))
 
+        # Lấy trạng thái thanh toán của lần thanh toán mới nhất (theo Payment.id lớn nhất)
+        latest_payment_id_subq = (
+            db.session.query(
+                Payment.bookingId.label("booking_id"),
+                func.max(Payment.id).label("max_payment_id"),
+            )
+            .group_by(Payment.bookingId)
+            .subquery()
+        )
+        LatestPayment = aliased(Payment)
+
         query = (
             db.session.query(
                 Booking.id.label('booking_id'),
@@ -77,12 +124,13 @@ def my_tickets():
                 Event.image.label('event_image'),
                 func.count(Ticket.id).label('quantity'),
                 total_amount_expr.label('total_amount'),
-                func.max(Payment.status).label('payment_status'),
+                LatestPayment.status.label('payment_status'),
             )
             .join(Ticket, Ticket.bookingId == Booking.id)
             .join(TicketType, TicketType.id == Ticket.ticketTypeId)
             .join(Event, Event.id == TicketType.eventId)
-            .outerjoin(Payment, Payment.bookingId == Booking.id)
+            .outerjoin(latest_payment_id_subq, latest_payment_id_subq.c.booking_id == Booking.id)
+            .outerjoin(LatestPayment, LatestPayment.id == latest_payment_id_subq.c.max_payment_id)
             .filter(Booking.customerId == current_user.id)
             .group_by(
                 Booking.id,
@@ -92,6 +140,7 @@ def my_tickets():
                 Event.id,
                 Event.title,
                 Event.image,
+                LatestPayment.status,
             )
             .order_by(Booking.createdAt.desc(), Booking.id.desc())
         )
@@ -100,10 +149,11 @@ def my_tickets():
 
         orders = []
         for row in bookings.items:
-            paid = (
-                str(row.booking_status or '').upper() == 'SUCCESS'
-                or str(row.payment_status or '').upper() == 'SUCCESS'
-            )
+            booking_status = str(row.booking_status or '').upper()
+            payment_status = str(row.payment_status or '').upper()
+
+            is_failed = booking_status == 'FAILED' or payment_status == 'FAILED'
+            is_paid = (booking_status == 'SUCCESS' or payment_status == 'SUCCESS') and not is_failed
 
             orders.append(
                 {
@@ -114,7 +164,7 @@ def my_tickets():
                     'created_at': row.created_at.strftime('%d-%m-%Y') if row.created_at else '',
                     'quantity': int(row.quantity or 0),
                     'total_amount': float(row.total_amount) if row.total_amount is not None else 0,
-                    'status': 'paid' if paid else 'pending',
+                    'status': 'failed' if is_failed else 'paid' if is_paid else 'pending',
                 }
             )
 
@@ -160,10 +210,11 @@ def booking_detail(booking_id: int):
             .first()
         )
 
-        paid = (
-            str(getattr(booking, 'status', '')).upper() == 'SUCCESS'
-            or str(getattr(payment, 'status', '')).upper() == 'SUCCESS'
-        )
+        booking_status = str(getattr(booking, 'status', '') or '').upper()
+        payment_status = str(getattr(payment, 'status', '') or '').upper()
+
+        # Nếu lần thanh toán mới nhất FAILED thì xem như chưa thanh toán thành công
+        paid = (booking_status == 'SUCCESS' or payment_status == 'SUCCESS') and booking_status != 'FAILED' and payment_status != 'FAILED'
 
         ticket_rows = (
             db.session.query(Ticket, TicketType, Event)

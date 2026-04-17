@@ -83,6 +83,7 @@
 
           <!-- QR Code -->
           <div class="col-md-5 text-center">
+            {% if show_qr %}
             <img src="{{ url_for('orders.ticket_qr_image', ticket_id=t.id) }}" alt="QR Ticket" class="img-fluid" style="
                 max-width: 240px;
                 border: 6px solid #f5f7ff;
@@ -91,6 +92,11 @@
             <div class="small text-muted mt-3">
               Quét QR này tại cổng để sử dụng vé
             </div>
+            {% else %}
+            <div class="alert alert-warning mb-0">
+              QR chỉ hiển thị khi thanh toán thành công.
+            </div>
+            {% endif %}
           </div>
         </div>
 

@@ -69,6 +69,10 @@
         color: #f59e0b;
     }
 
+    .myt-status--failed {
+        color: #dc2626;
+    }
+
     .myt-img {
         border-radius: 8px;
         overflow: hidden;
@@ -116,6 +120,8 @@
 
                     {% if (o.status or '') == 'paid' %}
                     <div class="myt-status myt-status--paid">Đã thanh toán</div>
+                    {% elif (o.status or '') == 'failed' %}
+                    <div class="myt-status myt-status--failed">Thanh toán thất bại</div>
                     {% else %}
                     <div class="myt-status myt-status--pending">Đang chờ thanh toán</div>
                     {% endif %}
