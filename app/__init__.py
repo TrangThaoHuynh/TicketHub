@@ -91,6 +91,7 @@ def create_app():
     from .routes.organizer_orders import organizer_bp
     from .routes.order import orders_bp
     from .routes.report_routes import report_bp
+    from .admin import init_admin
 
     app.register_blueprint(event_bp)
     app.register_blueprint(login_bp)
@@ -98,6 +99,9 @@ def create_app():
     app.register_blueprint(organizer_bp)
     app.register_blueprint(orders_bp)
     app.register_blueprint(report_bp)
+
+    # Flask-Admin (/admin)
+    init_admin(app)
     if app.config.get("DB_AUTO_INIT", True):
         try:
             _bootstrap_database(app)
@@ -114,11 +118,31 @@ def create_app():
         
     @app.context_processor
     def inject_user():
-        from .models.user import User
-        
+        from .models.user import User, Admin, Organizer, Customer
+
+        # Mặc định chưa có user đăng nhập
         user = None
+
+        # Cờ kiểm tra role để dùng trong template
+        is_admin = False
+        is_organizer = False
+        is_customer = False
+
+        # Nếu session có user_id thì lấy user hiện tại
         if 'user_id' in session:
             user = User.query.get(session['user_id'])
-        return dict(current_user=user)
 
+            # Nếu tìm thấy user thì kiểm tra user thuộc role nào
+            if user:
+                is_admin = Admin.query.get(user.id) is not None
+                is_organizer = Organizer.query.get(user.id) is not None
+                is_customer = Customer.query.get(user.id) is not None
+
+        # Trả biến ra toàn bộ template
+        return dict(
+            current_user=user,
+            is_admin=is_admin,
+            is_organizer=is_organizer,
+            is_customer=is_customer,
+        )
     return app

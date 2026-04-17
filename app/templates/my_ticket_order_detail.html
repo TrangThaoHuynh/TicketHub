@@ -28,9 +28,20 @@
 
     .od-summary__title {
         font-weight: 700;
-        color: #16a34a;
         margin: 0;
         font-size: 16px;
+    }
+
+    .od-summary__title--paid {
+        color: #16a34a;
+    }
+
+    .od-summary__title--pending {
+        color: #f59e0b;
+    }
+
+    .od-summary__title--failed {
+        color: #dc2626;
     }
 
     .od-summary__amount {
@@ -215,10 +226,17 @@
             <i class="fa-solid fa-arrow-left me-2"></i>Quay lại "Vé của tôi"
         </a>
 
+        {% set booking_status = (booking.status or '') | trim | lower %}
+        {% set payment_status = (payment.status or '') | trim | lower %}
+        {% set is_failed_order = booking_status == 'failed' or payment_status == 'failed' %}
+        {% set show_qr = paid and (not is_failed_order) and booking_status not in ['canceled', 'cancelled'] %}
+
         <div class="od-section mt-2">
             <div class="od-summary">
                 <div>
-                    <div class="od-summary__title">{{ 'Hoàn tất' if paid else 'Đang chờ thanh toán' }}</div>
+                    <div class="od-summary__title {{ 'od-summary__title--failed' if is_failed_order else 'od-summary__title--paid' if paid else 'od-summary__title--pending' }}">
+                        {{ 'Thanh toán thất bại' if is_failed_order else 'Hoàn tất' if paid else 'Đang chờ thanh toán' }}
+                    </div>
                     <div class="od-summary__amount">
                         {{ "{:,.0f}".format(total_amount or 0).replace(',', '.') }}đ
                     </div>
@@ -273,7 +291,9 @@
                 <a class="od-person od-person-link"
                     href="{{ url_for('orders.ticket_detail', ticket_id=it.ticket_id) }}">
                     <div class="od-person__name">{{ it.holder_name or '—' }}</div>
+                    {% if show_qr %}
                     <img class="od-qr" src="{{ it.qr_url }}" alt="QR" />
+                    {% endif %}
                     <div class="od-code-label">Mã vé</div>
                     <div class="od-code">
                         <span class="js-ticket-code">{{ it.ticket_code }}</span>

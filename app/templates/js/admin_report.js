@@ -2,7 +2,6 @@ document.addEventListener("DOMContentLoaded", function () {
   function parseDataset(id) {
     const el = document.getElementById(id);
     if (!el) return null;
-
     return {
       el,
       labels: JSON.parse(el.dataset.labels || "[]"),
@@ -168,7 +167,6 @@ document.addEventListener("DOMContentLoaded", function () {
       },
     });
   }
-
   createLineChart(parseDataset("timeRevenueChart"), "timeRevenueChartWrap");
   createBarChart(parseDataset("eventRevenueChart"), "eventRevenueChartWrap");
   createDoughnutChart(parseDataset("bookingStatusChart"));
