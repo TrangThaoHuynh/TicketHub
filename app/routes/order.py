@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, abort, send_file, request, url_for
+from flask import Blueprint, render_template, abort, send_file, request, url_for, redirect
 from flask_login import login_required, current_user
 from io import BytesIO
 from sqlalchemy import func
@@ -46,6 +46,9 @@ def ticket_qr_image(ticket_id):
 
     if t.customerId != current_user.id:
         abort(403)
+
+    if (t.qrCode or '').startswith('http'):
+        return redirect(t.qrCode)
 
     png_bytes = build_ticket_qr_png(t)
     buf = BytesIO(png_bytes)
@@ -179,6 +182,7 @@ def booking_detail(booking_id: int):
 
         for t, tt, _event in ticket_rows:
             code = t.ticketCode or t.id
+            qr_url = t.qrCode if (t.qrCode or '').startswith('http') else url_for('orders.ticket_qr_image', ticket_id=t.id)
 
             if t.price is not None:
                 total += float(t.price)
@@ -191,7 +195,7 @@ def booking_detail(booking_id: int):
                     'ticket_id': t.id,
                     'holder_name': t.fullName,
                     'ticket_code': code,
-                    'qr_url': url_for('orders.ticket_qr_image', ticket_id=t.id),
+                    'qr_url': qr_url,
                 }
             )
 
