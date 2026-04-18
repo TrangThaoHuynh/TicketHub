@@ -114,11 +114,17 @@ def create_ticket(data: dict):
 
 def ensure_ticket_qr_token(ticket: Ticket):
     """
-    Tạo token QR cho vé nếu chưa có.
-    qrCode trong DB sẽ lưu token đã ký.
+    Đảm bảo Ticket.qrCode luôn là token QR hợp lệ.
+    Nếu qrCode rỗng hoặc là dữ liệu cũ không hợp lệ thì sinh token mới.
     """
     if ticket.qrCode:
-        return ticket.qrCode
+        is_valid, payload, _ = verify_token(ticket.qrCode)
+
+        # Nếu qrCode hiện tại đã là token hợp lệ và đúng ticket hiện tại thì giữ nguyên
+        if is_valid and payload:
+            payload_ticket_id = str(payload.get("ticket_id", "")).strip()
+            if payload_ticket_id == str(ticket.id):
+                return ticket.qrCode
 
     ticket_type = TicketType.query.get(ticket.ticketTypeId)
     event_id = ticket_type.eventId if ticket_type else None
@@ -157,16 +163,20 @@ def get_event_by_ticket(ticket: Ticket):
         return None
     return Event.query.get(ticket_type.eventId)
 
+
 PAID_BOOKING_STATUSES = {"SUCCESS"}
 PAID_PAYMENT_STATUSES = {"SUCCESS"}
 
+
 def _normalize_status(value):
     return str(value or "").strip().upper()
+
 
 def _is_paid_booking(booking: Booking | None, payment: Payment | None) -> bool:
     booking_status = _normalize_status(getattr(booking, "status", None))
     payment_status = _normalize_status(getattr(payment, "status", None))
     return booking_status in PAID_BOOKING_STATUSES or payment_status in PAID_PAYMENT_STATUSES
+
 
 def _format_dt(dt: datetime | None) -> str:
     if not dt:
@@ -177,7 +187,7 @@ def _format_dt(dt: datetime | None) -> str:
 def _ticket_status_label(status: str | None) -> str:
     status_norm = _normalize_status(status)
 
-    if status_norm in {"VALID", "ACTIVE"}:
+    if status_norm == "VALID":
         return "chưa sử dụng"
     if status_norm == "USED":
         return "đã sử dụng"
