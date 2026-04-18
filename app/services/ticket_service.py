@@ -9,7 +9,9 @@ from .. import db
 from ..models.ticket import Ticket
 from ..models.ticket_type import TicketType
 from ..models.event import Event
-from ..utils.qr_utils import sign_payload
+from ..models.booking import Booking
+from ..models.payment import Payment
+from ..utils.qr_utils import sign_payload, verify_token
 
 
 # Lấy danh sách loại vé của 1 sự kiện
@@ -26,7 +28,7 @@ def count_sold_by_ticket_type(ticket_type_ids: list[int]) -> dict[int, int]:
         db.session.query(Ticket.ticketTypeId, func.count(Ticket.id))
         .filter(
             Ticket.ticketTypeId.in_(ticket_type_ids),
-            Ticket.status.in_(["ACTIVE", "USED", "VALID"])
+            Ticket.status.in_(["VALID", "USED"])
         )
         .group_by(Ticket.ticketTypeId)
         .all()
@@ -154,3 +156,246 @@ def get_event_by_ticket(ticket: Ticket):
     if not ticket_type:
         return None
     return Event.query.get(ticket_type.eventId)
+
+PAID_BOOKING_STATUSES = {"SUCCESS"}
+PAID_PAYMENT_STATUSES = {"SUCCESS"}
+
+def _normalize_status(value):
+    return str(value or "").strip().upper()
+
+def _is_paid_booking(booking: Booking | None, payment: Payment | None) -> bool:
+    booking_status = _normalize_status(getattr(booking, "status", None))
+    payment_status = _normalize_status(getattr(payment, "status", None))
+    return booking_status in PAID_BOOKING_STATUSES or payment_status in PAID_PAYMENT_STATUSES
+
+def _format_dt(dt: datetime | None) -> str:
+    if not dt:
+        return ""
+    return dt.strftime("%H:%M %d/%m/%Y")
+
+
+def _ticket_status_label(status: str | None) -> str:
+    status_norm = _normalize_status(status)
+
+    if status_norm in {"VALID", "ACTIVE"}:
+        return "chưa sử dụng"
+    if status_norm == "USED":
+        return "đã sử dụng"
+    if status_norm == "CANCELLED":
+        return "đã hủy"
+    if status_norm == "PENDING":
+        return "chờ xử lý"
+    return "không xác định"
+
+
+def _build_scan_payload(ticket: Ticket):
+    ticket_type = TicketType.query.get(ticket.ticketTypeId) if ticket.ticketTypeId else None
+    event = Event.query.get(ticket_type.eventId) if ticket_type else None
+    booking = Booking.query.get(ticket.bookingId) if ticket.bookingId else None
+    payment = (
+        Payment.query.filter_by(bookingId=ticket.bookingId).order_by(Payment.id.desc()).first()
+        if ticket.bookingId else None
+    )
+
+    event_time_text = ""
+    if event and event.startTime:
+        event_time_text = event.startTime.strftime("%H:%M | %d/%m/%Y")
+
+    return {
+        "ticket": {
+            "id": ticket.id,
+            "ticket_code": ticket.ticketCode or ticket.id,
+            "full_name": ticket.fullName or "",
+            "phone_number": ticket.phoneNumber or "",
+            "status": ticket.status or "",
+            "status_label": _ticket_status_label(ticket.status),
+            "checked_in_at": _format_dt(ticket.checkedIn),
+        },
+        "ticket_type": {
+            "id": ticket_type.id if ticket_type else None,
+            "name": ticket_type.name if ticket_type else "",
+        },
+        "event": {
+            "id": event.id if event else None,
+            "title": event.title if event else "",
+            "location": event.location if event else "",
+            "time_text": event_time_text,
+        },
+        "booking": {
+            "id": booking.id if booking else None,
+            "status": getattr(booking, "status", None),
+        },
+        "payment": {
+            "status": getattr(payment, "status", None),
+        },
+        "validation": {
+            "method": "QR code",
+            "result": "QR hợp lệ",
+        },
+    }
+
+
+def _inspect_ticket_for_checkin(organizer_id: int, event_id: int, ticket: Ticket | None):
+    # Kiểm tra event có thuộc organizer không
+    organizer_event = Event.query.filter_by(id=event_id, organizerId=organizer_id).first()
+    if organizer_event is None:
+        return {
+            "ok": False,
+            "error": "event_not_found",
+            "message": "Sự kiện không tồn tại hoặc bạn không có quyền quét vé cho sự kiện này.",
+        }
+
+    if ticket is None:
+        return {
+            "ok": False,
+            "error": "ticket_not_found",
+            "message": "Không tìm thấy vé.",
+        }
+
+    ticket_type = TicketType.query.get(ticket.ticketTypeId) if ticket.ticketTypeId else None
+    if ticket_type is None:
+        return {
+            "ok": False,
+            "error": "ticket_type_not_found",
+            "message": "Vé không có loại vé hợp lệ.",
+        }
+
+    real_event = Event.query.get(ticket_type.eventId)
+    if real_event is None or real_event.id != event_id or real_event.organizerId != organizer_id:
+        return {
+            "ok": False,
+            "error": "event_mismatch",
+            "message": "Vé này không thuộc sự kiện đang quét.",
+        }
+
+    booking = Booking.query.get(ticket.bookingId) if ticket.bookingId else None
+    payment = (
+        Payment.query.filter_by(bookingId=ticket.bookingId).order_by(Payment.id.desc()).first()
+        if ticket.bookingId else None
+    )
+
+    status_norm = _normalize_status(ticket.status)
+    paid = _is_paid_booking(booking, payment)
+
+    payload = _build_scan_payload(ticket)
+
+    if status_norm == "USED":
+        return {
+            "ok": False,
+            "error": "already_checked_in",
+            "message": "Vé này đã được check-in trước đó.",
+            **payload,
+        }
+
+    if status_norm == "CANCELLED":
+        return {
+            "ok": False,
+            "error": "ticket_cancelled",
+            "message": "Vé đã bị hủy nên không thể check-in.",
+            **payload,
+        }
+
+    if status_norm == "PENDING" and not paid:
+        return {
+            "ok": False,
+            "error": "ticket_unpaid",
+            "message": "Vé chưa thanh toán thành công nên không thể check-in.",
+            **payload,
+        }
+
+    return {
+        "ok": True,
+        "message": "Vé hợp lệ. Có thể xác nhận check-in.",
+        "can_checkin": True,
+        **payload,
+    }
+
+
+def inspect_qr_for_organizer(organizer_id: int, event_id: int, qr_token: str):
+    qr_token = (qr_token or "").strip()
+    if not qr_token:
+        return {
+            "ok": False,
+            "error": "empty_qr",
+            "message": "QR code trống.",
+        }
+
+    is_valid, payload, message = verify_token(qr_token)
+    if not is_valid:
+        return {
+            "ok": False,
+            "error": "invalid_qr",
+            "message": f"QR không hợp lệ: {message}",
+        }
+
+    ticket_id = payload.get("ticket_id")
+    payload_event_id = payload.get("event_id")
+
+    if not ticket_id:
+        return {
+            "ok": False,
+            "error": "invalid_payload",
+            "message": "QR không chứa ticket_id hợp lệ.",
+        }
+
+    try:
+        if payload_event_id is not None and int(payload_event_id) != int(event_id):
+            return {
+                "ok": False,
+                "error": "event_mismatch",
+                "message": "QR này không thuộc sự kiện đang quét.",
+            }
+    except (TypeError, ValueError):
+        return {
+            "ok": False,
+            "error": "invalid_payload",
+            "message": "QR chứa event_id không hợp lệ.",
+        }
+
+    ticket = Ticket.query.get(ticket_id)
+    if ticket and ticket.qrCode and ticket.qrCode != qr_token:
+        return {
+            "ok": False,
+            "error": "invalid_qr",
+            "message": "QR không khớp với dữ liệu vé hiện tại.",
+        }
+
+    return _inspect_ticket_for_checkin(organizer_id, event_id, ticket)
+
+
+def inspect_ticket_code_for_organizer(organizer_id: int, event_id: int, ticket_code: str):
+    ticket_code = (ticket_code or "").strip()
+    if not ticket_code:
+        return {
+            "ok": False,
+            "error": "empty_ticket_code",
+            "message": "Bạn chưa nhập mã vé.",
+        }
+
+    ticket = Ticket.query.filter_by(ticketCode=ticket_code).first()
+    return _inspect_ticket_for_checkin(organizer_id, event_id, ticket)
+
+
+def confirm_ticket_checkin_for_organizer(organizer_id: int, event_id: int, ticket_id: str):
+    ticket_id = (ticket_id or "").strip()
+    if not ticket_id:
+        return {
+            "ok": False,
+            "error": "empty_ticket_id",
+            "message": "Thiếu ticket_id để xác nhận check-in.",
+        }
+
+    ticket = Ticket.query.get(ticket_id)
+    inspect_result = _inspect_ticket_for_checkin(organizer_id, event_id, ticket)
+
+    if not inspect_result.get("ok"):
+        return inspect_result
+
+    mark_checked_in(ticket)
+    payload = _build_scan_payload(ticket)
+
+    return {
+        "ok": True,
+        "message": "Check-in thành công.",
+        **payload,
+    }
