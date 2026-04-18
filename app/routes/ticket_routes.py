@@ -1,31 +1,36 @@
 import re
 import secrets
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from io import BytesIO
 
 from flask import abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
-from flask_mail import Message
 import qrcode
 from sqlalchemy import func
 
-from .. import db, mail
+from .. import db
 from ..models.booking import Booking
 from ..models.event import Event
 from ..models.payment import Payment
 from ..models.ticket import Ticket
 from ..models.ticket_type import TicketType
-from ..models.user import Customer, User
+from ..models.user import Customer
 from ..services.cloudinary_service import cloudinary_service
 from ..services.event_service import get_event_by_id
+from ..services.ticket_email_service import send_ticket_email_by_booking
 from ..services.ticket_service import count_sold_by_ticket_type, get_ticket_types_by_event_id
 from ..utils.qr_utils import sign_payload
-from ..utils.vnpay_utils import build_payment_url, verify_return_data
+from ..utils.vnpay_utils import build_payment_url, request_refund, verify_return_data
 from .event_routes import event_bp
 
 
 CHECKOUT_PHONE_PATTERN = re.compile(r"^(0\d{9,10}|\+84\d{9,10})$")
+
+
+def _utcnow_naive() -> datetime:
+	# Preserve legacy naive-UTC behavior without relying on deprecated utcnow().
+	return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _parse_positive_int(value):
@@ -54,7 +59,7 @@ def _payment_return_url():
 
 
 def _build_vnpay_txn_ref(booking_id: int) -> str:
-	return f"BK{booking_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}"
+	return f"BK{booking_id}_{_utcnow_naive().strftime('%Y%m%d%H%M%S%f')}"
 
 
 def _extract_booking_id_from_txn_ref(txn_ref):
@@ -66,6 +71,37 @@ def _extract_booking_id_from_txn_ref(txn_ref):
 		normalized = normalized[2:].split("_", 1)[0]
 
 	return _parse_positive_int(normalized)
+
+
+def _parse_vnpay_pay_date(value):
+	text = str(value or "").strip()
+	if len(text) != 14 or not text.isdigit():
+		return None
+
+	try:
+		return datetime.strptime(text, "%Y%m%d%H%M%S")
+	except ValueError:
+		return None
+
+
+def _to_vnpay_datetime(value):
+	if value is None:
+		return ""
+
+	if isinstance(value, datetime):
+		return value.strftime("%Y%m%d%H%M%S")
+
+	text = str(value).strip()
+	return text if len(text) == 14 and text.isdigit() else ""
+
+
+def _extract_transaction_no(transaction_id):
+	parts = [part.strip() for part in str(transaction_id or "").split("|") if part.strip()]
+	if len(parts) >= 2:
+		return parts[1]
+	if len(parts) == 1:
+		return parts[0]
+	return ""
 
 
 def _generate_ticket_code():
@@ -148,7 +184,7 @@ def _create_and_upload_qr_url(ticket: Ticket, event_id: int):
 		"event_id": event_id,
 		"customer_id": ticket.customerId,
 		"booking_id": ticket.bookingId,
-		"iat": datetime.utcnow().replace(microsecond=0).isoformat(),
+		"iat": _utcnow_naive().replace(microsecond=0).isoformat(),
 	}
 
 	token = sign_payload(payload)
@@ -189,79 +225,6 @@ def _restore_quantity_for_failed_booking(booking_id: int):
 
 	for ticket_type in ticket_types:
 		ticket_type.quantity = int(ticket_type.quantity or 0) + restore_map.get(ticket_type.id, 0)
-
-
-def _send_payment_success_email(booking_id: int):
-	booking = db.session.get(Booking, booking_id)
-	if booking is None:
-		return
-
-	user = db.session.get(User, booking.customerId)
-	if user is None or not (user.email or "").strip():
-		return
-
-	tickets = (
-		Ticket.query
-		.filter(Ticket.bookingId == booking_id)
-		.order_by(Ticket.createdAt.asc())
-		.all()
-	)
-	if not tickets:
-		return
-
-	ticket_type_ids = list({ticket.ticketTypeId for ticket in tickets if ticket.ticketTypeId is not None})
-	ticket_type_map = {
-		ticket_type.id: ticket_type
-		for ticket_type in TicketType.query.filter(TicketType.id.in_(ticket_type_ids)).all()
-	}
-
-	event_title = "Sự kiện"
-	event_id = None
-	for ticket_type in ticket_type_map.values():
-		if ticket_type.eventId is not None:
-			event_id = ticket_type.eventId
-			break
-
-	if event_id is not None:
-		event = db.session.get(Event, event_id)
-		if event and event.title:
-			event_title = event.title
-
-	lines = [
-		f"Xin chào {user.name or user.username},",
-		"",
-		f"Đơn đặt vé #{booking.id} đã thanh toán thành công cho sự kiện: {event_title}",
-		"",
-		"Danh sách vé:",
-	]
-
-	for index, ticket in enumerate(tickets, start=1):
-		ticket_type = ticket_type_map.get(ticket.ticketTypeId)
-		qr_text = ticket.qrCode if (ticket.qrCode or "").startswith("http") else "Chưa có ảnh QR"
-		lines.extend(
-			[
-				f"{index}. Mã vé: {ticket.ticketCode or ticket.id}",
-				f"   Người giữ vé: {ticket.fullName or 'N/A'} - {ticket.phoneNumber or 'N/A'}",
-				f"   Loại vé: {ticket_type.name if ticket_type else 'N/A'}",
-				f"   QR: {qr_text}",
-			]
-		)
-
-	lines.extend(
-		[
-			"",
-			"Cảm ơn bạn đã sử dụng TicketHub.",
-		]
-	)
-
-	mail.send(
-		Message(
-			subject=f"TicketHub - Xác nhận thanh toán đơn #{booking.id}",
-			recipients=[user.email],
-			sender=current_app.config.get("MAIL_DEFAULT_SENDER"),
-			body="\n".join(lines),
-		)
-	)
 
 
 def _get_booking_event(booking_id: int):
@@ -525,12 +488,14 @@ def payment_return():
 
 	txn_ref = str(verify_result.get("txn_ref") or "").strip()
 	transaction_no = str(verify_result.get("transaction_no") or "").strip()
+	pay_date_raw = str(verify_result.get("pay_date") or "").strip()
+	pay_date = _parse_vnpay_pay_date(pay_date_raw)
 
 	if verify_result.get("is_success"):
 		transaction_id = transaction_no or txn_ref or f"BK{booking.id}_SUCCESS"
 	else:
 		# Failed attempts should be counted by each retry payment request.
-		transaction_id = txn_ref or transaction_no or f"BK{booking.id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}"
+		transaction_id = txn_ref or transaction_no or f"BK{booking.id}_{_utcnow_naive().strftime('%Y%m%d%H%M%S%f')}"
 
 	amount = booking.totalAmount if booking.totalAmount is not None else Decimal(str(verify_result.get("amount") or 0))
 
@@ -551,10 +516,17 @@ def payment_return():
 				payment = Payment(
 					amount=amount,
 					transactionID=transaction_id[:255],
+					vnpTxnRef=txn_ref[:50] if txn_ref else None,
+					vnpPayDate=pay_date,
 					status="SUCCESS",
 					bookingId=booking.id,
 				)
 				db.session.add(payment)
+			else:
+				if txn_ref and not existing_payment.vnpTxnRef:
+					existing_payment.vnpTxnRef = txn_ref[:50]
+				if pay_date and existing_payment.vnpPayDate is None:
+					existing_payment.vnpPayDate = pay_date
 
 			booking.status = "SUCCESS"
 			Ticket.query.filter(Ticket.bookingId == booking.id).update(
@@ -567,9 +539,9 @@ def payment_return():
 			flash("Thanh toán thành công.", "success")
 			if send_success_email:
 				try:
-					_send_payment_success_email(booking.id)
+					send_ticket_email_by_booking(booking.id)
 				except Exception:
-					current_app.logger.exception("Failed to send payment success email")
+					current_app.logger.exception("Failed to send ticket email by booking")
 
 			return redirect(my_tickets_url)
 
@@ -613,3 +585,178 @@ def payment_return():
 		current_app.logger.exception("Failed to process VNPay payment return")
 		flash("Không thể cập nhật trạng thái thanh toán. Vui lòng thử lại.", "danger")
 		return redirect(event_detail_url)
+
+
+def _refund_booking_for_customer(booking_id: int, customer_id: int):
+	booking = db.session.get(Booking, booking_id)
+	if booking is None or booking.customerId != customer_id:
+		flash("Không tìm thấy đơn hàng cần hủy/hoàn tiền.", "danger")
+		return redirect(url_for("orders.my_tickets"))
+
+	booking_detail_url = url_for("orders.booking_detail", booking_id=booking.id)
+
+	tickets = (
+		Ticket.query
+		.filter(
+			Ticket.bookingId == booking.id,
+			Ticket.customerId == customer_id,
+		)
+		.all()
+	)
+	if not tickets:
+		flash("Đơn hàng không có vé hợp lệ để hoàn tiền.", "danger")
+		return redirect(booking_detail_url)
+
+	statuses = [str(ticket.status or "").upper() for ticket in tickets]
+	if any(status in {"USED"} for status in statuses):
+		flash("Đơn hàng đã có vé được sử dụng, không thể hoàn tiền toàn bộ.", "warning")
+		return redirect(booking_detail_url)
+
+	if any(status == "CANCELLED" for status in statuses):
+		flash(
+			"Đơn hàng này đã có hoàn tiền trước đó, không hỗ trợ hoàn tiền độc lập từng vé.",
+			"warning",
+		)
+		return redirect(booking_detail_url)
+
+	valid_tickets = [ticket for ticket in tickets if str(ticket.status or "").upper() == "VALID"]
+	if not valid_tickets:
+		flash("Đơn hàng không còn vé hợp lệ để hoàn tiền.", "warning")
+		return redirect(booking_detail_url)
+
+	payment = (
+		Payment.query
+		.filter(
+			Payment.bookingId == booking.id,
+			func.upper(func.coalesce(Payment.status, "")) == "SUCCESS",
+		)
+		.order_by(Payment.id.desc())
+		.first()
+	)
+	if payment is None:
+		flash("Không tìm thấy giao dịch thanh toán thành công cho đơn hàng này.", "danger")
+		return redirect(booking_detail_url)
+
+	txn_ref = (payment.vnpTxnRef or "").strip()
+	transaction_no = _extract_transaction_no(payment.transactionID)
+	transaction_date = _to_vnpay_datetime(payment.vnpPayDate)
+	refund_amount = Decimal(str(payment.amount or booking.totalAmount or 0)).quantize(Decimal("0.01"))
+
+	if not txn_ref or not transaction_no or not transaction_date:
+		flash("Thiếu thông tin VNPay (TxnRef/TransactionNo/PayDate) để hoàn tiền.", "danger")
+		return redirect(booking_detail_url)
+
+	if refund_amount <= 0:
+		flash("Số tiền hoàn không hợp lệ.", "danger")
+		return redirect(booking_detail_url)
+
+	refund_result = request_refund(
+		amount=refund_amount,
+		txn_ref=txn_ref,
+		transaction_no=transaction_no,
+		transaction_date=transaction_date,
+		order_info=f"Hoan tien booking {booking.id}",
+		ip_addr=_request_client_ip(),
+		transaction_type="02",
+		create_by=str(customer_id),
+		timeout_seconds=30,
+	)
+
+	if not refund_result.get("is_success"):
+		failure_message = refund_result.get("message") or "Không xác định"
+		if "too many refund count" in failure_message.lower():
+			# VNPay says the transaction was already refunded.
+			# Sync local state to avoid keeping tickets as VALID after a remote refund.
+			try:
+				restore_map = {}
+				for ticket in valid_tickets:
+					ticket.status = "CANCELLED"
+					restore_map[ticket.ticketTypeId] = restore_map.get(ticket.ticketTypeId, 0) + 1
+
+				ticket_types = (
+					TicketType.query
+					.filter(TicketType.id.in_(list(restore_map.keys())))
+					.with_for_update()
+					.all()
+				)
+				for ticket_type in ticket_types:
+					ticket_type.quantity = int(ticket_type.quantity or 0) + restore_map.get(ticket_type.id, 0)
+
+				db.session.commit()
+			except Exception:
+				db.session.rollback()
+				current_app.logger.exception("Failed to reconcile booking after VNPay reported prior refund")
+				flash(
+					"VNPay báo giao dịch đã hoàn tiền trước đó, nhưng hệ thống không thể đồng bộ trạng thái vé. "
+					"Vui lòng liên hệ quản trị viên.",
+					"danger",
+				)
+				return redirect(booking_detail_url)
+
+			flash(
+				"Giao dịch đã được hoàn tiền trước đó trên VNPay. "
+				"Hệ thống đã đồng bộ trạng thái tất cả vé trong đơn về CANCELLED.",
+				"success",
+			)
+			return redirect(booking_detail_url)
+		elif "timeout" in failure_message.lower() or "read timed out" in failure_message.lower():
+			failure_message = (
+				"VNPay đang phản hồi chậm hoặc quá tải. "
+				"Vui lòng thử lại sau vài phút"
+			)
+		flash(f"Hoàn tiền thất bại: {failure_message}.", "danger")
+		return redirect(booking_detail_url)
+
+	try:
+		restore_map = {}
+		for ticket in valid_tickets:
+			ticket.status = "CANCELLED"
+			restore_map[ticket.ticketTypeId] = restore_map.get(ticket.ticketTypeId, 0) + 1
+
+		ticket_types = (
+			TicketType.query
+			.filter(TicketType.id.in_(list(restore_map.keys())))
+			.with_for_update()
+			.all()
+		)
+		for ticket_type in ticket_types:
+			ticket_type.quantity = int(ticket_type.quantity or 0) + restore_map.get(ticket_type.id, 0)
+
+		db.session.commit()
+	except Exception:
+		db.session.rollback()
+		current_app.logger.exception("Refund succeeded but failed to update booking tickets")
+		flash("Hoàn tiền thành công nhưng cập nhật trạng thái vé thất bại.", "danger")
+		return redirect(booking_detail_url)
+
+	flash("Hoàn tiền thành công. Tất cả vé trong đơn đã được hủy.", "success")
+	return redirect(booking_detail_url)
+
+
+@event_bp.route("/bookings/<int:booking_id>/cancel-refund", methods=["POST"])
+def cancel_booking_refund(booking_id: int):
+	user_id = session.get("user_id")
+	if user_id is None:
+		flash("Bạn cần đăng nhập để thực hiện thao tác này.", "danger")
+		return redirect(url_for("login.login"))
+
+	return _refund_booking_for_customer(booking_id=booking_id, customer_id=user_id)
+
+
+@event_bp.route("/tickets/<string:ticket_id>/cancel-refund", methods=["POST"])
+def cancel_ticket_refund(ticket_id: str):
+	user_id = session.get("user_id")
+	if user_id is None:
+		flash("Bạn cần đăng nhập để thực hiện thao tác này.", "danger")
+		return redirect(url_for("login.login"))
+
+	ticket = Ticket.query.filter(
+		Ticket.id == ticket_id,
+		Ticket.customerId == user_id,
+	).first()
+	if ticket is None:
+		flash("Không tìm thấy vé cần hủy.", "danger")
+		return redirect(url_for("orders.my_tickets"))
+
+	# Backward-compatible endpoint: always process refund at booking level.
+	return _refund_booking_for_customer(booking_id=ticket.bookingId, customer_id=user_id)

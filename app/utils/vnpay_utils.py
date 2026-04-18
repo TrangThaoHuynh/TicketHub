@@ -1,17 +1,20 @@
 import hashlib
 import hmac
 import os
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import datetime, timedelta
 from typing import Any, Dict, Mapping
 from urllib.parse import quote_plus
 
 from flask import has_app_context, current_app
+import requests
 
 # VNPay sandbox defaults for local simulation.
 VNP_TMNCODE = "YOUR_TMNCODE"
 VNP_HASHSECRET = "YOUR_SECRET_KEY"
 VNP_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
 VNP_RETURN_URL = "http://127.0.0.1:5000/payment_return"
+VNP_API_URL = "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction"
 
 
 RESPONSE_MESSAGES = {
@@ -47,6 +50,7 @@ def get_vnpay_config() -> Dict[str, str]:
 		"vnp_hash_secret": _load_setting("VNP_HASHSECRET", VNP_HASHSECRET),
 		"vnp_url": _load_setting("VNP_URL", VNP_URL),
 		"vnp_return_url": _load_setting("VNP_RETURN_URL", VNP_RETURN_URL),
+		"vnp_api_url": _load_setting("VNP_API_URL", VNP_API_URL),
 	}
 
 
@@ -157,8 +161,173 @@ def verify_return_data(query_params: Mapping[str, Any]) -> Dict[str, Any]:
 		"message": RESPONSE_MESSAGES.get(response_code, "Khong xac dinh"),
 		"txn_ref": normalized.get("vnp_TxnRef"),
 		"transaction_no": normalized.get("vnp_TransactionNo"),
+		"pay_date": normalized.get("vnp_PayDate"),
 		"amount": amount,
 		"raw": normalized,
+	}
+
+
+def build_refund_payload(
+	amount: float | int,
+	txn_ref: str,
+	transaction_no: str,
+	transaction_date: str,
+	order_info: str,
+	ip_addr: str = "127.0.0.1",
+	transaction_type: str = "02",
+	create_by: str = "system",
+	create_date: datetime | None = None,
+	request_id: str | None = None,
+) -> Dict[str, str]:
+	config = get_vnpay_config()
+	created_at = create_date or datetime.now()
+	resolved_request_id = (request_id or f"RF{created_at.strftime('%Y%m%d%H%M%S%f')}")[:32]
+	resolved_order_info = (order_info or "Hoan tien giao dich")[:255]
+
+	try:
+		amount_decimal = Decimal(str(amount)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+	except (InvalidOperation, TypeError, ValueError):
+		amount_decimal = Decimal("0.00")
+
+	amount_minor_units = int(
+		(amount_decimal * Decimal("100")).to_integral_value(rounding=ROUND_HALF_UP)
+	)
+
+	payload = {
+		"vnp_RequestId": resolved_request_id,
+		"vnp_Version": "2.1.0",
+		"vnp_Command": "refund",
+		"vnp_TmnCode": config["vnp_tmn_code"],
+		"vnp_TransactionType": str(transaction_type or "02"),
+		"vnp_TxnRef": str(txn_ref or ""),
+		"vnp_Amount": str(amount_minor_units),
+		"vnp_TransactionNo": str(transaction_no or ""),
+		"vnp_TransactionDate": str(transaction_date or ""),
+		"vnp_CreateBy": str(create_by or "system"),
+		"vnp_CreateDate": created_at.strftime("%Y%m%d%H%M%S"),
+		"vnp_IpAddr": str(ip_addr or "127.0.0.1"),
+		"vnp_OrderInfo": resolved_order_info,
+	}
+
+	hash_data = "|".join(
+		[
+			payload["vnp_RequestId"],
+			payload["vnp_Version"],
+			payload["vnp_Command"],
+			payload["vnp_TmnCode"],
+			payload["vnp_TransactionType"],
+			payload["vnp_TxnRef"],
+			payload["vnp_Amount"],
+			payload["vnp_TransactionNo"],
+			payload["vnp_TransactionDate"],
+			payload["vnp_CreateBy"],
+			payload["vnp_CreateDate"],
+			payload["vnp_IpAddr"],
+			payload["vnp_OrderInfo"],
+		]
+	)
+
+	payload["vnp_SecureHash"] = hmac.new(
+		config["vnp_hash_secret"].encode("utf-8"),
+		hash_data.encode("utf-8"),
+		hashlib.sha512,
+	).hexdigest()
+
+	return payload
+
+
+def request_refund(
+	amount: float | int,
+	txn_ref: str,
+	transaction_no: str,
+	transaction_date: str,
+	order_info: str,
+	ip_addr: str = "127.0.0.1",
+	transaction_type: str = "02",
+	create_by: str = "system",
+	timeout_seconds: int = 25,
+	max_retries: int = 2,
+) -> Dict[str, Any]:
+	config = get_vnpay_config()
+	payload = build_refund_payload(
+		amount=amount,
+		txn_ref=txn_ref,
+		transaction_no=transaction_no,
+		transaction_date=transaction_date,
+		order_info=order_info,
+		ip_addr=ip_addr,
+		transaction_type=transaction_type,
+		create_by=create_by,
+	)
+
+	attempt_count = max(1, int(max_retries or 1))
+	read_timeout = max(5, int(timeout_seconds or 25))
+	connect_timeout = 5
+
+	last_timeout_error = None
+	for attempt_index in range(attempt_count):
+		try:
+			response = requests.post(
+				config["vnp_api_url"],
+				json=payload,
+				timeout=(connect_timeout, read_timeout),
+			)
+			response.raise_for_status()
+			data = response.json() if response.content else {}
+			break
+		except requests.Timeout as exc:
+			last_timeout_error = exc
+			if attempt_index < attempt_count - 1:
+				continue
+			return {
+				"is_success": False,
+				"response_code": "99",
+				"message": (
+					f"VNPay phan hoi cham (timeout {read_timeout}s) sau {attempt_count} lan thu"
+				),
+				"raw": {},
+				"request_payload": payload,
+			}
+		except requests.RequestException as exc:
+			return {
+				"is_success": False,
+				"response_code": "99",
+				"message": f"Khong the ket noi VNPay: {exc}",
+				"raw": {},
+				"request_payload": payload,
+			}
+		except ValueError:
+			return {
+				"is_success": False,
+				"response_code": "99",
+				"message": "VNPay tra ve du lieu khong hop le.",
+				"raw": {},
+				"request_payload": payload,
+			}
+	else:
+		return {
+			"is_success": False,
+			"response_code": "99",
+			"message": f"Khong the ket noi VNPay: {last_timeout_error or 'Unknown timeout'}",
+			"raw": {},
+			"request_payload": payload,
+		}
+
+	response_code = str(data.get("vnp_ResponseCode") or "").strip()
+	transaction_status = str(data.get("vnp_TransactionStatus") or "").strip()
+	message = str(data.get("vnp_Message") or RESPONSE_MESSAGES.get(response_code, "Khong xac dinh")).strip()
+
+	# Refund API can return success message even when transaction status is not "00".
+	is_success = response_code == "00"
+	if not is_success and "refund success" in message.lower():
+		is_success = True
+
+	return {
+		"is_success": is_success,
+		"response_code": response_code,
+		"message": message,
+		"raw": data,
+		"request_payload": payload,
 	}
 
 
