@@ -9,9 +9,9 @@
 <div class="organizer-approval-page">
     <h2 class="organizer-approval-title">Duyệt nhà tổ chức</h2>
 
-    <div class="organizer-approval-toolbar">
+    <form class="organizer-approval-toolbar" method="get" action="{{ url_for('admin_organizer_approval.index') }}">
         <div class="oa-search">
-            <input type="text" placeholder="Nhập từ khóa cần tìm kiếm" value="{{ filters.q }}" disabled />
+            <input type="text" name="q" placeholder="Nhập từ khóa cần tìm kiếm" value="{{ filters.q }}" />
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="8"></circle>
@@ -19,20 +19,20 @@
             </svg>
         </div>
 
-        <div class="oa-filter" aria-disabled="true">
-            <span class="oa-filter-left">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" aria-hidden="true">
-                    <path d="M22 3H2l8 10v7l4 2v-9l8-10z"></path>
-                </svg>
-                <span>Tất cả</span>
-            </span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round" aria-hidden="true">
-                <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
+        <div class="oa-filter-wrap">
+            <select class="oa-filter" name="status" aria-label="Lọc theo trạng thái">
+                <option value="all" {% if (filters.status or 'all') == 'all' %}selected{% endif %}>Tất cả</option>
+                <option value="pending" {% if (filters.status or '') == 'pending' %}selected{% endif %}>Đang chờ</option>
+                <option value="approved" {% if (filters.status or '') == 'approved' %}selected{% endif %}>Đã duyệt</option>
+                <option value="rejected" {% if (filters.status or '') == 'rejected' %}selected{% endif %}>Đã từ chối</option>
+            </select>
         </div>
-    </div>
+
+        <div class="oa-toolbar-actions">
+            <button class="oa-action-btn primary" type="submit">Lọc</button>
+            <a class="oa-action-btn" href="{{ url_for('admin_organizer_approval.index') }}">Bỏ lọc</a>
+        </div>
+    </form>
 
     <div class="oa-table-wrap">
         <table class="table oa-table">

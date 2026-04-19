@@ -45,29 +45,51 @@
 }
 
 .oa-filter {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
     height: 42px;
     border-radius: 999px;
     border: 1px solid rgba(46, 109, 164, 0.55);
-    padding: 0 12px 0 14px;
+    padding: 0 14px;
     background: #fff;
     color: #2e6da4;
     font-weight: 600;
     min-width: 160px;
-    justify-content: space-between;
+    outline: none;
+    box-shadow: none;
 }
 
-.oa-filter-left {
+.oa-filter-wrap {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
 }
 
-.oa-filter svg {
-    width: 18px;
-    height: 18px;
+.oa-filter:focus {
+    border-color: rgba(46, 109, 164, 0.75);
+}
+
+.oa-toolbar-actions {
+    display: inline-flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.oa-action-btn {
+    height: 42px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    background: #fff;
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.72);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.oa-action-btn.primary {
+    border-color: rgba(46, 109, 164, 0.55);
+    color: #2e6da4;
 }
 
 .oa-table-wrap {
@@ -128,6 +150,7 @@
     border: 1px solid rgba(0, 0, 0, 0.22);
     background: #fff;
     font-weight: 600;
+    min-width: 88px;
 }
 
 .oa-btn.approve {
@@ -147,12 +170,53 @@
     border-radius: 8px;
     border: 1px solid rgba(61, 121, 214, 0.35);
     background: #fff;
+    text-decoration: none;
 }
 
 .oa-detail svg {
     width: 18px;
     height: 18px;
     color: #3d79d6;
+}
+
+.oa-detail-header {
+    width: min(1120px, 100%);
+    margin: 0 auto 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.oa-detail-card {
+    width: min(1120px, 100%);
+    margin: 0 auto;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #fff;
+    padding: 16px;
+}
+
+.oa-detail-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.oa-detail-row:last-child {
+    border-bottom: 0;
+}
+
+.oa-detail-label {
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.7);
+}
+
+.oa-detail-value {
+    color: rgba(0, 0, 0, 0.85);
+    word-break: break-word;
 }
 
 .oa-pagination {

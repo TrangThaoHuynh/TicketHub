@@ -88,6 +88,7 @@ def create_app():
     
     from . import models
     from .routes.event_routes import event_bp
+    from .routes import ticket_routes
     from .routes.auth_routes import login_bp
     from .routes.main import main
     from .routes.organizer_orders import organizer_bp

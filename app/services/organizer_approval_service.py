@@ -1,8 +1,6 @@
 from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import datetime
-
 from flask import current_app
 from sqlalchemy import case, func, or_
 
@@ -161,7 +159,6 @@ def set_organizer_status(*, organizer_id: int, new_status: str) -> str | None:
     except Exception:
         db.session.rollback()
         return "Không thể cập nhật trạng thái nhà tổ chức. Vui lòng thử lại."
-
     if normalized_status in {"APPROVED", "REJECTED"}:
         organizer_user = db.session.get(User, organizer_id_int)
         if organizer_user is not None:
