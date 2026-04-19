@@ -7,22 +7,21 @@
 
     <div class="card mt-3">
       <div class="card-body">
-        <!-- Header: Tên event + Trạng thái -->
         <div class="d-flex align-items-start justify-content-between mb-2">
           <h3 class="mb-0 text-uppercase fw-bold" style="font-size: 1.5rem">
             {{ t.event.title if t.event else 'N/A' }}
           </h3>
           <span
             class="badge {{ 'bg-success' if t.status=='VALID'
-                                else 'bg-secondary' if t.status=='USED'
-                                else 'bg-danger' if t.status=='CANCELLED'
-                                else 'bg-warning' }}"
+                            else 'bg-secondary' if t.status=='USED'
+                            else 'bg-danger' if t.status=='CANCELLED'
+                            else 'bg-warning' }}"
             style="font-size: 0.85rem; padding: 0.5rem 0.75rem"
-            >{{ t.status }}</span
           >
+            {{ t.status }}
+          </span>
         </div>
 
-        <!-- Thông tin Event -->
         {% if t.event %}
         <div class="small text-muted mb-3">
           <i class="fa-regular fa-clock me-1"></i>
@@ -35,11 +34,8 @@
 
         <hr class="my-3" />
 
-        <!-- Main Content -->
         <div class="row g-5">
-          <!-- Thông tin vé -->
           <div class="col-md-7">
-            <!-- MÃ VÉ -->
             <div class="d-flex justify-content-between align-items-start mb-3">
               <div>
                 <div class="text-uppercase small text-muted mb-1">Mã vé</div>
@@ -49,7 +45,6 @@
               </div>
             </div>
 
-            <!-- LOẠI VÉ & GIÁ -->
             {% if t.ticket_type %}
             <div class="mb-3">
               <div class="text-uppercase small text-muted mb-1">Loại vé</div>
@@ -64,19 +59,16 @@
             </div>
             {% endif %}
 
-            <!-- HỌ VÀ TÊN -->
             <div class="mb-3">
               <div class="text-uppercase small text-muted mb-1">Họ và tên</div>
               <div class="fw-semibold">{{ t.fullName }}</div>
             </div>
 
-            <!-- SĐT -->
             <div class="mb-3">
               <div class="text-uppercase small text-muted mb-1">SĐT</div>
               <div class="fw-semibold">{{ t.phoneNumber }}</div>
             </div>
 
-            <!-- Phát hành -->
             {% if t.createdAt %}
             <div class="small text-muted">
               Phát hành: {{ t.createdAt.strftime('%d/%m/%Y %H:%M') }} UTC
@@ -84,8 +76,26 @@
             {% endif %}
           </div>
 
-          <!-- QR Code -->
           <div class="col-md-5 text-center">
+            {% if t.event and t.event.hasFaceReg %}
+            <div
+              class="border rounded-3 p-4 bg-light h-100 d-flex flex-column justify-content-center"
+            >
+              <div class="mb-3">
+                <i
+                  class="fa-solid fa-user-check"
+                  style="font-size: 56px; color: #1c7ce2"
+                ></i>
+              </div>
+              <div class="fw-semibold mb-2">
+                Sự kiện dùng check-in bằng khuôn mặt
+              </div>
+              <div class="small text-muted">
+                Khi vào cổng, nhân viên sẽ quét khuôn mặt để xác minh vé của
+                bạn.
+              </div>
+            </div>
+            {% else %}
             <img
               src="{{ url_for('orders.ticket_qr_image', ticket_id=t.id) }}"
               alt="QR Ticket"
@@ -99,19 +109,25 @@
             <div class="small text-muted mt-3">
               Quét QR này tại cổng để sử dụng vé
             </div>
+            {% endif %}
           </div>
         </div>
 
         <hr class="my-4" />
 
-        <!-- Hướng dẫn sử dụng -->
         <div class="mb-3">
           <div class="fw-semibold mb-2">Hướng dẫn sử dụng</div>
           <ol class="mb-0 small ps-4">
+            {% if t.event and t.event.hasFaceReg %}
+            <li>Mang theo giấy tờ tùy thân khi cần đối chiếu.</li>
+            <li>Đứng trước camera tại cổng để nhân viên xác minh khuôn mặt.</li>
+            {% else %}
             <li>Mở trang này và đưa mã QR cho nhân viên quét.</li>
             <li>Giữ mã vé và giấy tờ tùy thân để đối chiếu khi cần.</li>
+            {% endif %}
           </ol>
         </div>
+
         <div class="d-flex gap-2">
           {% if t.event %}
           <a
@@ -122,6 +138,7 @@
           </a>
           {% endif %}
         </div>
+
         {% if t.status != 'VALID' %}
         <div class="alert alert-warning mt-4 mb-0">
           Lưu ý: Vé ở trạng thái <b>{{ t.status }}</b>, có thể không sử dụng

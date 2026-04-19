@@ -421,9 +421,6 @@ def confirm_ticket_checkin_for_organizer(organizer_id: int, event_id: int, ticke
 def _set_face_validation_payload(payload: dict, distance: float):
     """
     Cập nhật dữ liệu validation vào payload với thông tin xác nhận khuôn mặt.
-    
-    Hàm này bổ sung thông tin về phương pháp xác nhận (khuôn mặt),
-    khoảng cách cosine và độ tin cậy vào một dictionary payload.
     """
     # Lấy hoặc tạo mới dictionary "validation" trong payload
     validation = payload.setdefault("validation", {})
@@ -440,13 +437,6 @@ def _set_face_validation_payload(payload: dict, distance: float):
 def inspect_face_for_organizer(organizer_id: int, event_id: int, face_image_base64: str):
     """
     Kiểm tra khuôn mặt từ ảnh quét và tìm vé khớp trong sự kiện.
-    
-    Hàm này là API xác thực khuôn mặt cho người tổ chức sự kiện.
-    Khi nhân viên quét/chụp khuôn mặt tại cổng, hàm này sẽ:
-    1. Trích xuất đặc trưng khuôn mặt từ ảnh base64
-    2. So sánh với tất cả vé của sự kiện
-    3. Tìm vé khớp nhất (khoảng cách cosine nhỏ nhất)
-    4. Kiểm tra xem vé có hợp lệ để check-in không
     """
     # Kiểm tra event có thuộc organizer này không
     organizer_event = Event.query.filter_by(id=event_id, organizerId=organizer_id).first()
@@ -527,7 +517,7 @@ def inspect_face_for_organizer(organizer_id: int, event_id: int, face_image_base
         }
 
     # Bước 4: Kiểm tra xem khoảng cách có nhỏ hơn ngưỡng (threshold) không
-    # Ngưỡng mặc định: 0.35 (có thể config qua FACE_MATCH_THRESHOLD)
+    # Ngưỡng mặc định: 0.35 (config qua FACE_MATCH_THRESHOLD)
     # Nếu distance <= 0.35 → khuôn mặt khớp
     # Nếu distance > 0.35 → khuôn mặt không khớp
     threshold = float(current_app.config.get("FACE_MATCH_THRESHOLD", 0.35))
@@ -558,10 +548,7 @@ def inspect_face_for_organizer(organizer_id: int, event_id: int, face_image_base
 
 def confirm_face_checkin_for_organizer(organizer_id: int, event_id: int, ticket_id: str):
     """
-    Xác nhận check-in vé sau khi đã xác thực khuôn mặt thành công.
-    
-    Hàm này được gọi sau khi hàm inspect_face_for_organizer() đã xác thực
-    khuôn mặt thành công. Nó sẽ đánh dấu vé là "USED" (đã sử dụng).
+    Xác nhận check-in vé sau khi đã xác thực khuôn mặt thành công.Đánh dấu vé là "USED" (đã sử dụng).
     """
     # Kiểm tra event có thuộc organizer này không
     organizer_event = Event.query.filter_by(id=event_id, organizerId=organizer_id).first()

@@ -20,9 +20,6 @@ DEFAULT_DETECTOR_BACKEND = "opencv"
 def _strip_data_url_prefix(value: str) -> str:
     """
     Lấy phần dữ liệu base64 từ định dạng data URL.
-    
-    Ví dụ input: "data:image/jpeg;base64,/9j/4AAQSkZJRgABA..."
-    Output: "/9j/4AAQSkZJRgABA..."
     """
     text = str(value or "").strip()
     # Kiểm tra xem có dấu "," và bắt đầu bằng "data:image" không
@@ -35,12 +32,6 @@ def _strip_data_url_prefix(value: str) -> str:
 def decode_base64_image(face_image_base64: str) -> bytes:
     """
     Giải mã chuỗi base64 thành bytes của ảnh.
-    
-    Input: "data:image/jpeg;base64,/9j/4AAQSkZIRgABA..."
-    Output: bytes của ảnh (b'\xff\xd8\xff\xe0...')
-    
-    Raises:
-        ValueError: Nếu không có dữ liệu hoặc base64 không hợp lệ
     """
     # Lấy phần base64 sạch (không có prefix "data:image/...;base64,")
     raw = _strip_data_url_prefix(face_image_base64)
@@ -101,8 +92,6 @@ def extract_face_embedding_from_base64(
             detector_backend=detector_backend,
             enforce_detection=True,  # Bắt buộc phải phát hiện được khuôn mặt
         )
-
-        # Kiểm tra kết quả
         if not result:
             raise ValueError("Không phát hiện được khuôn mặt trong ảnh.")
 
@@ -118,10 +107,8 @@ def extract_face_embedding_from_base64(
         return json.dumps([float(x) for x in embedding], ensure_ascii=False)
 
     except ValueError:
-        # Re-raise lỗi validation
         raise
     except Exception as exc:
-        # Log lỗi và raise lỗi user-friendly
         current_app.logger.exception("DeepFace represent failed")
         raise ValueError(f"Không thể xử lý ảnh khuôn mặt: {exc}")
     finally:
@@ -140,12 +127,6 @@ def load_embedding_vector(raw_embedding: str | None):
     
     Input: "[0.123, -0.456, 0.789, ...]"
     Output: np.array([0.123, -0.456, 0.789, ...], dtype=float32)
-    
-    Args:
-        raw_embedding: Chuỗi JSON chứa vector embedding
-    
-    Returns:
-        numpy array float32 hoặc None nếu dữ liệu không hợp lệ
     """
     if not raw_embedding:
         return None
@@ -166,17 +147,6 @@ def load_embedding_vector(raw_embedding: str | None):
 def cosine_distance(vec1, vec2) -> float:
     """
     Tính khoảng cách cosine giữa 2 vector khuôn mặt.
-    
-    Công thức: distance = 1 - (vec1 · vec2) / (||vec1|| * ||vec2||)
-    - Kết quả 0.0 = hai khuôn mặt giống nhau
-    - Kết quả 1.0 = hai khuôn mặt hoàn toàn khác
-    
-    Args:
-        vec1: Vector embedding khuôn mặt 1
-        vec2: Vector embedding khuôn mặt 2
-    
-    Returns:
-        float: Khoảng cách (0.0 - 1.0)
     """
     # Nếu bất kỳ vector nào None, coi là khác hoàn toàn
     if vec1 is None or vec2 is None:
@@ -202,20 +172,8 @@ def cosine_distance(vec1, vec2) -> float:
 def confidence_from_distance(distance: float) -> float:
     """
     Chuyển đổi khoảng cách cosine thành độ tin cậy phần trăm.
-    
-    - distance 0.2 → confidence 80% (giống nhau 80%)
-    - distance 0.8 → confidence 20% (giống nhau 20%)
-    
-    Công thức: confidence = (1.0 - distance) * 100
-    
-    Args:
-        distance: Khoảng cách cosine (0.0 - 1.0)
-    
-    Returns:
-        float: Độ tin cậy (0.0 - 100.0) làm tròn 2 chữ số thập phân
     """
     # Chuyển đổi distance thành percentage
     score = (1.0 - float(distance)) * 100.0
-    
     # Giới hạn trong [0, 100] và làm tròn 2 chữ số thập phân
     return round(max(0.0, min(100.0, score)), 2)

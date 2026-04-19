@@ -225,8 +225,13 @@ def organizer_confirm_checkin():
 
 @organizer_bp.route('/api/face/identify', methods=['POST'])
 def organizer_identify_face():
+    """
+    Xác định khuôn mặt từ ảnh để kiểm tra xem vé đó tồn tại hay không.
+    """
+    # Lấy user_id từ session
     user_id = session.get('user_id')
     if not user_id:
+        # Trả về lỗi nếu người dùng chưa đăng nhập
         return jsonify({
             "ok": False,
             "error": "unauthorized",
@@ -234,11 +239,14 @@ def organizer_identify_face():
         }), 401
 
     organizer_id = int(user_id)
+    # Lấy payload từ JSON request hoặc form data
     payload = request.get_json(silent=True) or request.form
 
+    # Lấy event_id và ảnh khuôn mặt base64 từ payload
     raw_event_id = payload.get("event_id")
     face_image_base64 = payload.get("face_image_base64", "")
 
+    # Xác thực event_id là số nguyên
     try:
         event_id = int(raw_event_id)
     except (TypeError, ValueError):
@@ -248,6 +256,7 @@ def organizer_identify_face():
             "message": "event_id không hợp lệ.",
         }), 400
 
+    # Gọi service để xác định khuôn mặt
     result = inspect_face_for_organizer(
         organizer_id=organizer_id,
         event_id=event_id,
@@ -258,8 +267,13 @@ def organizer_identify_face():
 
 @organizer_bp.route('/api/face/check-in', methods=['POST'])
 def organizer_confirm_face_checkin():
+    """
+    Xác nhận check-in cho vé dựa trên khuôn mặt đã xác định.
+    """
+    # Lấy user_id từ session
     user_id = session.get('user_id')
     if not user_id:
+        # Trả về lỗi nếu người dùng chưa đăng nhập
         return jsonify({
             "ok": False,
             "error": "unauthorized",
@@ -267,11 +281,14 @@ def organizer_confirm_face_checkin():
         }), 401
 
     organizer_id = int(user_id)
+    # Lấy payload từ JSON request hoặc form data
     payload = request.get_json(silent=True) or request.form
 
+    # Lấy event_id và ticket_id từ payload
     raw_event_id = payload.get("event_id")
     ticket_id = payload.get("ticket_id", "")
 
+    # Xác thực event_id là số nguyên
     try:
         event_id = int(raw_event_id)
     except (TypeError, ValueError):
@@ -281,6 +298,7 @@ def organizer_confirm_face_checkin():
             "message": "event_id không hợp lệ.",
         }), 400
 
+    # Gọi service để xác nhận check-in cho vé
     result = confirm_face_checkin_for_organizer(
         organizer_id=organizer_id,
         event_id=event_id,
