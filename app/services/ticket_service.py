@@ -12,7 +12,15 @@ from ..models.event import Event
 from ..models.booking import Booking
 from ..models.payment import Payment
 from ..utils.qr_utils import sign_payload, verify_token
-
+import json
+import math
+from flask import current_app
+from ..services.face_service import (
+    extract_face_embedding_from_base64,
+    load_embedding_vector,
+    cosine_distance,
+    confidence_from_distance,
+)
 
 # Lấy danh sách loại vé của 1 sự kiện
 def get_ticket_types_by_event_id(event_id: int):
@@ -409,3 +417,172 @@ def confirm_ticket_checkin_for_organizer(organizer_id: int, event_id: int, ticke
         "message": "Check-in thành công.",
         **payload,
     }
+
+def _set_face_validation_payload(payload: dict, distance: float):
+    """
+    Cập nhật dữ liệu validation vào payload với thông tin xác nhận khuôn mặt.
+    
+    Hàm này bổ sung thông tin về phương pháp xác nhận (khuôn mặt),
+    khoảng cách cosine và độ tin cậy vào một dictionary payload.
+    """
+    # Lấy hoặc tạo mới dictionary "validation" trong payload
+    validation = payload.setdefault("validation", {})
+    
+    # Cập nhật phương pháp xác nhận = khuôn mặt
+    validation["method"] = "face"
+    validation["result"] = "Khuôn mặt khớp"
+    validation["distance"] = round(float(distance), 4)
+    validation["confidence"] = confidence_from_distance(distance)
+    
+    return payload
+
+
+def inspect_face_for_organizer(organizer_id: int, event_id: int, face_image_base64: str):
+    """
+    Kiểm tra khuôn mặt từ ảnh quét và tìm vé khớp trong sự kiện.
+    
+    Hàm này là API xác thực khuôn mặt cho người tổ chức sự kiện.
+    Khi nhân viên quét/chụp khuôn mặt tại cổng, hàm này sẽ:
+    1. Trích xuất đặc trưng khuôn mặt từ ảnh base64
+    2. So sánh với tất cả vé của sự kiện
+    3. Tìm vé khớp nhất (khoảng cách cosine nhỏ nhất)
+    4. Kiểm tra xem vé có hợp lệ để check-in không
+    """
+    # Kiểm tra event có thuộc organizer này không
+    organizer_event = Event.query.filter_by(id=event_id, organizerId=organizer_id).first()
+    if organizer_event is None:
+        return {
+            "ok": False,
+            "error": "event_not_found",
+            "message": "Sự kiện không tồn tại hoặc bạn không có quyền quét vé cho sự kiện này.",
+        }
+
+    # Kiểm tra sự kiện này có bật check-in bằng khuôn mặt không
+    if not organizer_event.hasFaceReg:
+        return {
+            "ok": False,
+            "error": "invalid_checkin_mode",
+            "message": "Sự kiện này không dùng check-in bằng khuôn mặt.",
+        }
+
+    # Bước 1: Trích xuất đặc trưng khuôn mặt từ ảnh base64
+    try:
+        query_embedding_json = extract_face_embedding_from_base64(face_image_base64)
+    except ValueError as exc:
+        return {
+            "ok": False,
+            "error": "invalid_face_image",
+            "message": str(exc),  # Ví dụ: "Không phát hiện được khuôn mặt trong ảnh"
+        }
+
+    # Chuyển JSON vector thành numpy array để tính toán
+    query_vector = load_embedding_vector(query_embedding_json)
+    if query_vector is None:
+        return {
+            "ok": False,
+            "error": "invalid_face_embedding",
+            "message": "Không đọc được đặc trưng khuôn mặt từ ảnh vừa quét.",
+        }
+
+    # Bước 2: Lấy danh sách tất cả vé của sự kiện có lưu dữ liệu khuôn mặt
+    candidate_tickets = (
+        db.session.query(Ticket)
+        .join(TicketType, TicketType.id == Ticket.ticketTypeId)
+        .filter(TicketType.eventId == event_id)
+        .filter(Ticket.faceEmbedding.isnot(None))  # Chỉ lấy vé có ảnh khuôn mặt
+        .all()
+    )
+
+    if not candidate_tickets:
+        return {
+            "ok": False,
+            "error": "no_face_data",
+            "message": "Sự kiện này chưa có dữ liệu khuôn mặt để đối chiếu.",
+        }
+
+    # Bước 3: So sánh khuôn mặt quét với tất cả vé, tìm vé khớp nhất
+    best_ticket = None
+    best_distance = 999.0  # Khởi tạo với giá trị cao
+
+    for ticket in candidate_tickets:
+        # Chuyển dữ liệu khuôn mặt lưu trong DB thành vector
+        stored_vector = load_embedding_vector(ticket.faceEmbedding)
+        if stored_vector is None:
+            continue
+
+        # Tính khoảng cách cosine (0 = giống hệt, 1 = hoàn toàn khác)
+        distance = cosine_distance(query_vector, stored_vector)
+        
+        # Cập nhật vé khớp nhất nếu khoảng cách nhỏ hơn
+        if distance < best_distance:
+            best_distance = distance
+            best_ticket = ticket
+
+    # Kiểm tra xem có tìm được vé nào không
+    if best_ticket is None:
+        return {
+            "ok": False,
+            "error": "no_face_match",
+            "message": "Không tìm thấy vé có dữ liệu khuôn mặt hợp lệ.",
+        }
+
+    # Bước 4: Kiểm tra xem khoảng cách có nhỏ hơn ngưỡng (threshold) không
+    # Ngưỡng mặc định: 0.35 (có thể config qua FACE_MATCH_THRESHOLD)
+    # Nếu distance <= 0.35 → khuôn mặt khớp
+    # Nếu distance > 0.35 → khuôn mặt không khớp
+    threshold = float(current_app.config.get("FACE_MATCH_THRESHOLD", 0.35))
+    if best_distance > threshold:
+        return {
+            "ok": False,
+            "error": "face_not_match",
+            "message": "Không tìm thấy khuôn mặt khớp với vé trong sự kiện này.",
+            "match": {
+                "distance": round(best_distance, 4),
+                "confidence": confidence_from_distance(best_distance),  # Độ tin cậy (%)
+            },
+        }
+
+    # Bước 5: Nếu khuôn mặt khớp, kiểm tra xem vé có hợp lệ để check-in không
+    inspect_result = _inspect_ticket_for_checkin(organizer_id, event_id, best_ticket)
+
+    # Bước 6: Nếu vé hợp lệ, thêm thông tin validation khuôn mặt vào kết quả
+    if "ticket" in inspect_result:
+        _set_face_validation_payload(inspect_result, best_distance)
+        inspect_result["match"] = {
+            "distance": round(best_distance, 4),
+            "confidence": confidence_from_distance(best_distance),
+        }
+
+    return inspect_result
+
+
+def confirm_face_checkin_for_organizer(organizer_id: int, event_id: int, ticket_id: str):
+    """
+    Xác nhận check-in vé sau khi đã xác thực khuôn mặt thành công.
+    
+    Hàm này được gọi sau khi hàm inspect_face_for_organizer() đã xác thực
+    khuôn mặt thành công. Nó sẽ đánh dấu vé là "USED" (đã sử dụng).
+    """
+    # Kiểm tra event có thuộc organizer này không
+    organizer_event = Event.query.filter_by(id=event_id, organizerId=organizer_id).first()
+    if organizer_event is None:
+        return {
+            "ok": False,
+            "error": "event_not_found",
+            "message": "Sự kiện không tồn tại hoặc bạn không có quyền check-in.",
+        }
+
+    # Kiểm tra sự kiện có bật check-in bằng khuôn mặt không
+    if not organizer_event.hasFaceReg:
+        return {
+            "ok": False,
+            "error": "invalid_checkin_mode",
+            "message": "Sự kiện này không dùng check-in bằng khuôn mặt.",
+        }
+
+    # Gọi hàm chung để confirm check-in
+    return confirm_ticket_checkin_for_organizer(
+        organizer_id=organizer_id,
+        event_id=event_id,
+        ticket_id=ticket_id,
+    )

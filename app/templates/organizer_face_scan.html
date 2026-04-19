@@ -1,0 +1,516 @@
+{% extends "base.html" %} {% block styles %}
+<style>
+  .face-page {
+    padding: 28px 0 36px;
+    background: #f7f8fb;
+    min-height: calc(100vh - 120px);
+  }
+
+  .face-shell {
+    border: 1px solid #cfd4dc;
+    border-radius: 24px;
+    background: #fff;
+    padding: 22px;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+  }
+
+  .face-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .face-subtitle {
+    color: #6b7280;
+    font-size: 15px;
+    margin-bottom: 18px;
+    line-height: 1.5;
+  }
+
+  .face-camera-box {
+    border-radius: 20px;
+    background: #eef2ff;
+    min-height: 370px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  #faceVideo {
+    width: 100%;
+    height: 370px;
+    object-fit: cover;
+    display: block;
+    background: #dbe4ff;
+  }
+
+  .face-actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .face-actions .btn {
+    min-width: 150px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+
+  .face-alert {
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+  }
+
+  .face-alert.show {
+    display: flex;
+  }
+  .face-alert-success {
+    background: #dff3e8;
+    border: 1px solid #b4dfc5;
+    color: #1f7a45;
+  }
+  .face-alert-error {
+    background: #fde2e2;
+    border: 1px solid #f3b6b6;
+    color: #b33b3b;
+  }
+
+  .face-result-card {
+    border: 1px solid #d9dee8;
+    border-radius: 20px;
+    padding: 20px 24px;
+    min-height: 320px;
+    background: #fff;
+  }
+
+  .face-result-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+
+  .face-result-item {
+    margin-bottom: 12px;
+    font-size: 16px;
+  }
+
+  .face-result-item strong {
+    min-width: 150px;
+    display: inline-block;
+  }
+
+  .face-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-transform: lowercase;
+  }
+
+  .face-status-ready {
+    background: #dfeee5;
+    color: #2f6b49;
+  }
+
+  .face-status-used {
+    background: #f5d7d7;
+    color: #9d3030;
+  }
+
+  .face-status-pending {
+    background: #fff1cc;
+    color: #9a6b00;
+  }
+
+  .face-status-cancelled {
+    background: #ececec;
+    color: #555;
+  }
+
+  .face-confirm-wrap {
+    margin-top: 22px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .face-confirm-wrap .btn {
+    min-width: 180px;
+    border-radius: 12px;
+    font-weight: 700;
+  }
+
+  .face-empty {
+    color: #6b7280;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+</style>
+{% endblock %} {% block content %}
+<section class="face-page">
+  <div class="container">
+    <div class="face-shell">
+      <div class="row g-4">
+        <div class="col-lg-5">
+          <div class="face-title">
+            <i class="fa-solid fa-user-check me-2"></i>Quét khuôn mặt vé sự kiện
+          </div>
+          <div class="face-subtitle">
+            Đưa khuôn mặt vào khung camera để nhận diện và đối chiếu với vé đã
+            đăng ký.
+            <br />
+            Sự kiện hiện tại: <strong>{{ event.title }}</strong>
+          </div>
+
+          <div class="face-camera-box">
+            <video id="faceVideo" autoplay playsinline muted></video>
+            <canvas id="faceCanvas" style="display: none"></canvas>
+          </div>
+
+          <div class="face-actions">
+            <button id="btnStartCamera" class="btn btn-primary">
+              Bật camera
+            </button>
+            <button id="btnCaptureFace" class="btn btn-success" disabled>
+              Nhận diện khuôn mặt
+            </button>
+            <button
+              id="btnStopCamera"
+              class="btn btn-outline-secondary"
+              disabled
+            >
+              Dừng
+            </button>
+          </div>
+        </div>
+
+        <div class="col-lg-7">
+          <div id="successBox" class="face-alert face-alert-success">
+            <i class="fa-solid fa-circle-check"></i>
+            <span id="successText">Check-in thành công</span>
+          </div>
+
+          <div id="errorBox" class="face-alert face-alert-error">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span id="errorText">Không nhận diện được vé</span>
+          </div>
+
+          <div class="face-result-card">
+            <div class="face-result-title">Thông tin vé</div>
+
+            <div id="ticketInfoEmpty" class="face-empty">
+              Chưa có dữ liệu vé. Hãy bật camera và bấm “Nhận diện khuôn mặt”.
+            </div>
+
+            <div id="ticketInfoDetail" style="display: none">
+              <div class="face-result-item">
+                <strong>Mã vé:</strong>
+                <span id="detailTicketCode"></span>
+              </div>
+
+              <div class="face-result-item">
+                <strong>Họ và tên:</strong>
+                <span id="detailFullName"></span>
+              </div>
+
+              <div class="face-result-item">
+                <strong>Sự kiện:</strong>
+                <span id="detailEventTitle"></span>
+              </div>
+
+              <div class="face-result-item">
+                <strong>Loại vé:</strong>
+                <span id="detailTicketType"></span>
+              </div>
+
+              <div class="face-result-item">
+                <strong>Thời gian:</strong>
+                <span id="detailEventTime"></span>
+              </div>
+
+              <div class="face-result-item">
+                <strong>Trạng thái:</strong>
+                <span id="detailStatusBadge" class="face-status-badge"></span>
+              </div>
+
+              <div class="face-result-item">
+                <strong>Kết quả đối chiếu:</strong>
+                <span id="detailValidationResult"></span>
+              </div>
+
+              <div class="face-result-item">
+                <strong>Độ tin cậy:</strong>
+                <span id="detailConfidence"></span>
+              </div>
+
+              <div class="face-result-item">
+                <strong>Số điện thoại:</strong>
+                <span id="detailPhoneNumber"></span>
+              </div>
+
+              <div
+                class="face-result-item"
+                id="checkedInRow"
+                style="display: none"
+              >
+                <strong>Đã check-in lúc:</strong>
+                <span id="detailCheckedInAt"></span>
+              </div>
+
+              <div class="face-confirm-wrap">
+                <button id="btnConfirmCheckin" class="btn btn-success" disabled>
+                  Xác nhận check-in
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const eventId = {{ event.id | tojson }};
+      const video = document.getElementById("faceVideo");
+      const canvas = document.getElementById("faceCanvas");
+
+      const btnStartCamera = document.getElementById("btnStartCamera");
+      const btnCaptureFace = document.getElementById("btnCaptureFace");
+      const btnStopCamera = document.getElementById("btnStopCamera");
+      const btnConfirmCheckin = document.getElementById("btnConfirmCheckin");
+
+      const successBox = document.getElementById("successBox");
+      const successText = document.getElementById("successText");
+      const errorBox = document.getElementById("errorBox");
+      const errorText = document.getElementById("errorText");
+
+      const ticketInfoEmpty = document.getElementById("ticketInfoEmpty");
+      const ticketInfoDetail = document.getElementById("ticketInfoDetail");
+
+      const detailTicketCode = document.getElementById("detailTicketCode");
+      const detailFullName = document.getElementById("detailFullName");
+      const detailEventTitle = document.getElementById("detailEventTitle");
+      const detailTicketType = document.getElementById("detailTicketType");
+      const detailEventTime = document.getElementById("detailEventTime");
+      const detailStatusBadge = document.getElementById("detailStatusBadge");
+      const detailValidationResult = document.getElementById("detailValidationResult");
+      const detailConfidence = document.getElementById("detailConfidence");
+      const detailPhoneNumber = document.getElementById("detailPhoneNumber");
+      const checkedInRow = document.getElementById("checkedInRow");
+      const detailCheckedInAt = document.getElementById("detailCheckedInAt");
+
+      let currentTicketId = null;
+      let mediaStream = null;
+
+      function showSuccess(message) {
+        successText.textContent = message || "Check-in thành công";
+        successBox.classList.add("show");
+        errorBox.classList.remove("show");
+      }
+
+      function showError(message) {
+        errorText.textContent = message || "Có lỗi xảy ra";
+        errorBox.classList.add("show");
+        successBox.classList.remove("show");
+      }
+
+      function hideAlerts() {
+        successBox.classList.remove("show");
+        errorBox.classList.remove("show");
+      }
+
+      function resetResultCard() {
+        currentTicketId = null;
+        btnConfirmCheckin.disabled = true;
+        ticketInfoEmpty.style.display = "block";
+        ticketInfoDetail.style.display = "none";
+      }
+
+      function setStatusBadge(status, label) {
+        const statusNorm = String(status || "").toUpperCase();
+        detailStatusBadge.className = "face-status-badge";
+
+        if (statusNorm === "USED") {
+          detailStatusBadge.classList.add("face-status-used");
+        } else if (statusNorm === "PENDING") {
+          detailStatusBadge.classList.add("face-status-pending");
+        } else if (statusNorm === "CANCELLED") {
+          detailStatusBadge.classList.add("face-status-cancelled");
+        } else {
+          detailStatusBadge.classList.add("face-status-ready");
+        }
+
+        detailStatusBadge.textContent = label || "không xác định";
+      }
+
+      function renderTicketInfo(data, canCheckin) {
+        const ticket = data.ticket || {};
+        const event = data.event || {};
+        const ticketType = data.ticket_type || {};
+        const validation = data.validation || {};
+        const match = data.match || {};
+
+        detailTicketCode.textContent = ticket.ticket_code || "";
+        detailFullName.textContent = ticket.full_name || "";
+        detailEventTitle.textContent = event.title || "";
+        detailTicketType.textContent = ticketType.name || "";
+        detailEventTime.textContent = event.time_text || "";
+        detailValidationResult.textContent = validation.result || "";
+        detailConfidence.textContent = (match.confidence != null ? (match.confidence + "%") : "");
+        detailPhoneNumber.textContent = ticket.phone_number || "";
+
+        setStatusBadge(ticket.status, ticket.status_label);
+
+        if (ticket.checked_in_at) {
+          checkedInRow.style.display = "block";
+          detailCheckedInAt.textContent = ticket.checked_in_at;
+        } else {
+          checkedInRow.style.display = "none";
+          detailCheckedInAt.textContent = "";
+        }
+
+        currentTicketId = ticket.id || null;
+        btnConfirmCheckin.disabled = !canCheckin || !currentTicketId;
+
+        ticketInfoEmpty.style.display = "none";
+        ticketInfoDetail.style.display = "block";
+      }
+
+      async function postJson(url, payload) {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        return response.json();
+      }
+
+      function captureFrameAsBase64() {
+        if (!video.videoWidth || !video.videoHeight) {
+          throw new Error("Camera chưa sẵn sàng.");
+        }
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        return canvas.toDataURL("image/jpeg", 0.92);
+      }
+
+      async function startCamera() {
+        hideAlerts();
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          showError("Trình duyệt không hỗ trợ camera.");
+          return;
+        }
+
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "user" },
+            audio: false,
+          });
+
+          video.srcObject = mediaStream;
+          btnStartCamera.disabled = true;
+          btnCaptureFace.disabled = false;
+          btnStopCamera.disabled = false;
+          showSuccess("Camera đã bật. Hãy nhìn thẳng vào camera.");
+        } catch (error) {
+          showError("Không thể mở camera. Hãy kiểm tra quyền truy cập camera.");
+        }
+      }
+
+      function stopCamera() {
+        if (mediaStream) {
+          mediaStream.getTracks().forEach((track) => track.stop());
+          mediaStream = null;
+        }
+
+        video.srcObject = null;
+        btnStartCamera.disabled = false;
+        btnCaptureFace.disabled = true;
+        btnStopCamera.disabled = true;
+      }
+
+      async function identifyFace() {
+        hideAlerts();
+
+        try {
+          const faceImageBase64 = captureFrameAsBase64();
+
+          const result = await postJson("/api/face/identify", {
+            event_id: eventId,
+            face_image_base64: faceImageBase64,
+          });
+
+          if (result.ok) {
+            renderTicketInfo(result, true);
+            showSuccess(result.message || "Khuôn mặt hợp lệ. Có thể xác nhận check-in.");
+            return;
+          }
+
+          if (result.ticket) {
+            renderTicketInfo(result, false);
+          } else {
+            resetResultCard();
+          }
+
+          showError(result.message || "Không nhận diện được vé.");
+        } catch (error) {
+          showError(error.message || "Không thể chụp ảnh từ camera.");
+        }
+      }
+
+      async function confirmCheckin() {
+        if (!currentTicketId) {
+          showError("Chưa có vé hợp lệ để xác nhận check-in.");
+          return;
+        }
+
+        hideAlerts();
+
+        const result = await postJson("/api/face/check-in", {
+          event_id: eventId,
+          ticket_id: currentTicketId,
+        });
+
+        if (result.ok) {
+          renderTicketInfo(result, false);
+          btnConfirmCheckin.disabled = true;
+          showSuccess(result.message || "Check-in thành công.");
+          return;
+        }
+
+        if (result.ticket) {
+          renderTicketInfo(result, false);
+        } else {
+          resetResultCard();
+        }
+
+        showError(result.message || "Không thể xác nhận check-in.");
+      }
+
+      btnStartCamera.addEventListener("click", startCamera);
+      btnCaptureFace.addEventListener("click", identifyFace);
+      btnStopCamera.addEventListener("click", stopCamera);
+      btnConfirmCheckin.addEventListener("click", confirmCheckin);
+
+      resetResultCard();
+    });
+  </script>
+  {% endblock %}
+</section>

@@ -20,6 +20,7 @@ from ..services.cloudinary_service import cloudinary_service
 from ..services.event_service import get_event_by_id
 from ..services.ticket_email_service import send_ticket_email_by_booking
 from ..services.ticket_service import count_sold_by_ticket_type, get_ticket_types_by_event_id
+from ..services.face_service import extract_face_embedding_from_base64
 from ..utils.qr_utils import sign_payload
 from ..utils.vnpay_utils import build_payment_url, request_refund, verify_return_data
 from .event_routes import event_bp
@@ -112,8 +113,8 @@ def _generate_ticket_code():
 
 	return f"TK{uuid.uuid4().hex[:8].upper()}"
 
-
-def _parse_checkout_tickets(payload_tickets):
+# xác thực và chuẩn hóa dữ liệu vé mà khách hàng chọn thanh toán
+def _parse_checkout_tickets(payload_tickets, require_face=False):
 	if not isinstance(payload_tickets, list) or not payload_tickets:
 		return None, "Vui lòng chọn ít nhất một loại vé."
 
@@ -141,18 +142,21 @@ def _parse_checkout_tickets(payload_tickets):
 
 			full_name = " ".join((holder.get("fullName") or "").split())
 			phone_number = _normalize_phone_number(holder.get("phoneNumber"))
-			face_embedding = (holder.get("faceEmbedding") or "").strip() or None
+			face_image_base64 = (holder.get("faceImageBase64") or "").strip() or None
 
 			if len(full_name) < 2:
 				return None, f"Vui lòng nhập họ tên hợp lệ cho vé thứ {holder_index} của loại vé thứ {ticket_index}."
 			if not CHECKOUT_PHONE_PATTERN.match(phone_number):
 				return None, f"Số điện thoại của vé thứ {holder_index} của loại vé thứ {ticket_index} không hợp lệ."
 
+			if require_face and not face_image_base64:
+				return None, f"Vui lòng tải ảnh khuôn mặt cho vé thứ {holder_index} của loại vé thứ {ticket_index}."
+
 			parsed_holders.append(
 				{
 					"fullName": full_name,
 					"phoneNumber": phone_number,
-					"faceEmbedding": face_embedding,
+					"faceImageBase64": face_image_base64,
 				}
 			)
 
@@ -319,7 +323,10 @@ def checkout_event_tickets(event_id: int):
 		return jsonify({"ok": False, "message": "Sự kiện hiện không mở bán vé."}), 400
 
 	payload = request.get_json(silent=True) or {}
-	checkout_tickets, parse_error = _parse_checkout_tickets(payload.get("tickets"))
+	checkout_tickets, parse_error = _parse_checkout_tickets(
+		payload.get("tickets"),
+		require_face=bool(event.hasFaceReg),
+	)
 	if parse_error:
 		return jsonify({"ok": False, "message": parse_error}), 400
 
@@ -397,6 +404,19 @@ def checkout_event_tickets(event_id: int):
 			ticket_type = ticket_type_map[selected_ticket["ticketTypeId"]]
 
 			for holder in selected_ticket["holders"]:
+				face_embedding = None
+
+				if event.hasFaceReg:
+					try:
+						face_embedding = extract_face_embedding_from_base64(holder.get("faceImageBase64"))
+					except ValueError as exc:
+						return jsonify(
+							{
+								"ok": False,
+								"message": f"{holder['fullName']}: {exc}",
+							}
+						), 400
+
 				ticket = Ticket(
 					id=str(uuid.uuid4()),
 					qrCode=None,
@@ -406,7 +426,7 @@ def checkout_event_tickets(event_id: int):
 					ticketCode=_generate_ticket_code(),
 					fullName=holder["fullName"],
 					phoneNumber=holder["phoneNumber"],
-					faceEmbedding=holder.get("faceEmbedding"),
+					faceEmbedding=face_embedding,
 					status="PENDING",
 					bookingId=booking.id,
 					ticketTypeId=ticket_type.id,
@@ -453,7 +473,6 @@ def checkout_event_tickets(event_id: int):
 			"paymentUrl": payment_payload["payment_url"],
 		}
 	)
-
 
 @event_bp.route("/payment_return")
 def payment_return():

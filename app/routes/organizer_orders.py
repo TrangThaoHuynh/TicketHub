@@ -5,6 +5,8 @@ from ..services.ticket_service import (
     confirm_ticket_checkin_for_organizer,
     inspect_ticket_code_for_organizer,
     inspect_qr_for_organizer,
+    inspect_face_for_organizer,
+    confirm_face_checkin_for_organizer,
 )
 from ..services.organizer_order_service import (
     get_order_detail_for_organizer,
@@ -136,8 +138,10 @@ def organizer_event_scan(event_id: int):
     if event is None:
         abort(404)
 
+    template_name = 'organizer_face_scan.html' if event.hasFaceReg else 'organizer_qr_scan.html'
+
     return render_template(
-        'organizer_qr_scan.html',
+        template_name,
         event=event,
         show_search=False,
     )
@@ -213,6 +217,71 @@ def organizer_confirm_checkin():
         })
 
     result = confirm_ticket_checkin_for_organizer(
+        organizer_id=organizer_id,
+        event_id=event_id,
+        ticket_id=ticket_id,
+    )
+    return jsonify(result)
+
+@organizer_bp.route('/api/face/identify', methods=['POST'])
+def organizer_identify_face():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({
+            "ok": False,
+            "error": "unauthorized",
+            "message": "Bạn chưa đăng nhập.",
+        }), 401
+
+    organizer_id = int(user_id)
+    payload = request.get_json(silent=True) or request.form
+
+    raw_event_id = payload.get("event_id")
+    face_image_base64 = payload.get("face_image_base64", "")
+
+    try:
+        event_id = int(raw_event_id)
+    except (TypeError, ValueError):
+        return jsonify({
+            "ok": False,
+            "error": "invalid_event_id",
+            "message": "event_id không hợp lệ.",
+        }), 400
+
+    result = inspect_face_for_organizer(
+        organizer_id=organizer_id,
+        event_id=event_id,
+        face_image_base64=face_image_base64,
+    )
+    return jsonify(result)
+
+
+@organizer_bp.route('/api/face/check-in', methods=['POST'])
+def organizer_confirm_face_checkin():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({
+            "ok": False,
+            "error": "unauthorized",
+            "message": "Bạn chưa đăng nhập.",
+        }), 401
+
+    organizer_id = int(user_id)
+    payload = request.get_json(silent=True) or request.form
+
+    raw_event_id = payload.get("event_id")
+    ticket_id = payload.get("ticket_id", "")
+
+    try:
+        event_id = int(raw_event_id)
+    except (TypeError, ValueError):
+        return jsonify({
+            "ok": False,
+            "error": "invalid_event_id",
+            "message": "event_id không hợp lệ.",
+        }), 400
+
+    result = confirm_face_checkin_for_organizer(
         organizer_id=organizer_id,
         event_id=event_id,
         ticket_id=ticket_id,

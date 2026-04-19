@@ -38,7 +38,8 @@ def ticket_detail(ticket_id):
     t.ticket_type = TicketType.query.get(t.ticketTypeId)
     t.event = Event.query.get(t.ticket_type.eventId) if t.ticket_type else None
 
-    ensure_ticket_qr_token(t)
+    if not (t.event and t.event.hasFaceReg):
+        ensure_ticket_qr_token(t)
     return render_template("ticket_detail.html", t=t)
 
 @orders_bp.route("/ticket/<ticket_id>/qr.png")
