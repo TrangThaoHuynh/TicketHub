@@ -51,7 +51,9 @@ class Config:
     MAIL_USE_SSL = _env_bool("MAIL_USE_SSL", False)
     MAIL_USERNAME = os.getenv("MAIL_USERNAME")
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
-    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", MAIL_USERNAME)
+    # Default "From" address for all outgoing emails.
+    # Can be overridden via MAIL_DEFAULT_SENDER in .env.
+    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "tickethub@gmail.com")
 
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")

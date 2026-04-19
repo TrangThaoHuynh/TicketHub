@@ -7,8 +7,12 @@ Authlib==1.6.9
 requests==2.33.1
 cloudinary==1.41.0
 pytest==9.0.3
-dotenv==1.2.2
+python-dotenv==1.0.1
 flask_login==0.6.3
 qrcode==8.2
 Pillow==12.2.0
 Flask-Admin==2.0.2
+joblib==1.4.2
+scikit-learn==1.8.0
+pandas==2.2.3
+cloudinary==1.41.0

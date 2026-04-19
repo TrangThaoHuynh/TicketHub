@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import redirect, request, session, url_for
+from flask import abort, flash, redirect, request, session, url_for
 from flask_admin import Admin, AdminIndexView, BaseView, expose
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib.sqla.filters import BaseSQLAFilter
@@ -273,44 +273,46 @@ class AdminLogoutView(BaseView):
 class OrganizerApprovalView(BaseView):
     @expose("/")
     def index(self):
-        # UI-only: demo data to render the page layout.
-        rows = [
-            {
-                "name": "Nhà tổ chức 1",
-                "username": "organizer1",
-                "email": "organizer1@gmail.com",
-                "phone": "0453444443",
-                "status": "APPROVED",
-            },
-            {
-                "name": "Nhà tổ chức 2",
-                "username": "organizer2",
-                "email": "organizer2@gmail.com",
-                "phone": "0122345567",
-                "status": "REJECTED",
-            },
-            {
-                "name": "Nhà tổ chức 3",
-                "username": "organizer3",
-                "email": "organizer3@gmail.com",
-                "phone": "0829344487",
-                "status": "PENDING",
-            },
-            {
-                "name": "Nhà tổ chức 4",
-                "username": "organizer4",
-                "email": "organizer4@gmail.com",
-                "phone": "0899376589",
-                "status": "APPROVED",
-            },
-        ]
+        from .services.organizer_approval_service import list_organizers_for_approval
 
         filters = {
             "q": request.args.get("q", ""),
             "status": request.args.get("status", "all"),
         }
 
+        rows = list_organizers_for_approval(q=filters["q"], status=filters["status"])
         return self.render("admin_organizer_approval.html", rows=rows, filters=filters)
+
+    @expose("/detail/<int:organizer_id>")
+    def detail(self, organizer_id: int):
+        from .services.organizer_approval_service import get_organizer_approval_detail
+
+        organizer = get_organizer_approval_detail(organizer_id=organizer_id)
+        if organizer is None:
+            abort(404)
+        return self.render("admin_organizer_approval_detail.html", organizer=organizer)
+
+    @expose("/approve/<int:organizer_id>", methods=("POST",))
+    def approve(self, organizer_id: int):
+        from .services.organizer_approval_service import set_organizer_status
+
+        error = set_organizer_status(organizer_id=organizer_id, new_status="APPROVED")
+        if error:
+            flash(error, "error")
+        else:
+            flash("Đã duyệt nhà tổ chức.", "success")
+        return redirect(url_for("admin_organizer_approval.index"))
+
+    @expose("/reject/<int:organizer_id>", methods=("POST",))
+    def reject(self, organizer_id: int):
+        from .services.organizer_approval_service import set_organizer_status
+
+        error = set_organizer_status(organizer_id=organizer_id, new_status="REJECTED")
+        if error:
+            flash(error, "error")
+        else:
+            flash("Đã từ chối nhà tổ chức.", "success")
+        return redirect(url_for("admin_organizer_approval.index"))
 
     def is_accessible(self) -> bool:
         return _is_admin()
