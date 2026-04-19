@@ -39,7 +39,7 @@
 
 			<div class="org-detail-actions">
 				{% if not is_cancelled_event %}
-				{% if not is_finished_event %}
+				{% if is_pending_event and not is_finished_event %}
 				<button type="button" class="org-detail-btn org-detail-btn--ticket" data-action="open-ticket-adjust">Điều chỉnh vé</button>
 				{% endif %}
 				{% if is_pending_event %}
@@ -296,5 +296,15 @@
 
 {% block scripts %}
 <script id="ticketAdjustInitialData" type="application/json">{{ ticket_types_payload|default([], true)|tojson }}</script>
+{% set organizer_event_detail_context = {
+	'eventId': event.id if event else none,
+	'eventTypeId': event.eventTypeId if event else none,
+	'location': event.location if event and event.location else '',
+	'startTime': event.startTime.strftime('%Y-%m-%dT%H:%M') if event and event.startTime else '',
+	'endTime': event.endTime.strftime('%Y-%m-%dT%H:%M') if event and event.endTime else '',
+	'hasFaceReg': (true if event and event.hasFaceReg is not false else false),
+	'limitQuantity': (event.limitQuantity if event and event.limitQuantity else none),
+} %}
+<script id="organizerEventDetailContext" type="application/json">{{ organizer_event_detail_context|tojson }}</script>
 <script src="{{ url_for('main.static', filename='js/organizer_event_detail.js') }}"></script>
 {% endblock %}
