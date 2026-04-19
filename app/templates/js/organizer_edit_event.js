@@ -108,6 +108,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	const ticketNameInput = document.getElementById("ticketName");
 	const ticketPriceInput = document.getElementById("ticketPrice");
+	const suggestTicketPriceBtn = document.getElementById("suggestTicketPriceBtn");
 	const ticketFreeInput = document.getElementById("ticketFree");
 	const ticketQuantityInput = document.getElementById("ticketQuantity");
 	const ticketSaleStartInput = document.getElementById("ticketSaleStart");
@@ -148,6 +149,50 @@ document.addEventListener("DOMContentLoaded", function () {
 	let cropBox = null;
 	let cropInteraction = null;
 	let editingTicketIndex = -1;
+	let ticketAdjustLocked = false;
+
+	function normalizeStatus(status) {
+		const text = String(status || "").trim().toUpperCase();
+		return text === "PUBLISHED" ? "PUBLISHED" : "PENDING";
+	}
+
+	function getSelectedEventStatus() {
+		const checked = document.querySelector('input[name="eventStatus"]:checked');
+		if (checked) {
+			return normalizeStatus(checked.value);
+		}
+		return normalizeStatus(initialEventData.eventStatus);
+	}
+
+	function setSuggestButtonLoading(isLoading) {
+		if (!suggestTicketPriceBtn) {
+			return;
+		}
+		suggestTicketPriceBtn.disabled = Boolean(isLoading) || ticketAdjustLocked;
+		suggestTicketPriceBtn.textContent = isLoading ? "Đang gợi ý..." : "Gợi ý giá";
+	}
+
+	function applyTicketAdjustLock(status) {
+		ticketAdjustLocked = normalizeStatus(status) !== "PENDING";
+		if (openTicketFormBtn) {
+			openTicketFormBtn.disabled = ticketAdjustLocked;
+		}
+
+		if (ticketAdjustLocked) {
+			closeTicketForm();
+		}
+
+		if (ticketFreeInput && ticketAdjustLocked) {
+			ticketFreeInput.checked = Boolean(ticketFreeInput.checked);
+		}
+
+		if (suggestTicketPriceBtn) {
+			suggestTicketPriceBtn.disabled = ticketAdjustLocked || (ticketFreeInput && ticketFreeInput.checked);
+			suggestTicketPriceBtn.textContent = "Gợi ý giá";
+		}
+
+		renderTicketTypes();
+	}
 
 	function normalizeImageMimeType(mimeType) {
 		if (mimeType === "image/png" || mimeType === "image/webp") {
@@ -767,6 +812,11 @@ document.addEventListener("DOMContentLoaded", function () {
 			ticketPriceInput.value = ticket.price != null ? String(ticket.price) : "";
 		}
 
+		if (suggestTicketPriceBtn) {
+			suggestTicketPriceBtn.disabled = ticketAdjustLocked || isFree;
+			suggestTicketPriceBtn.textContent = "Gợi ý giá";
+		}
+
 		setTicketFormEditingState(true);
 		ticketTypeForm.classList.remove("is-hidden");
 		ticketTypeForm.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -790,6 +840,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
 		ticketTypeEmpty.style.display = "none";
 
+		const isLocked = Boolean(ticketAdjustLocked);
+		const actionDisabledAttr = isLocked ? " disabled" : "";
+
 		ticketTypes.forEach(function (ticket, index) {
 			const item = document.createElement("div");
 			item.className = "ticket-item";
@@ -807,10 +860,14 @@ document.addEventListener("DOMContentLoaded", function () {
 				'<div class="ticket-item__actions">' +
 				'<button type="button" class="ticket-item__edit" data-index="' +
 				index +
-				'">Sửa</button>' +
+				'"' +
+				actionDisabledAttr +
+				">Sửa</button>" +
 				'<button type="button" class="ticket-item__remove" data-index="' +
 				index +
-				'">Xóa</button>' +
+				'"' +
+				actionDisabledAttr +
+				">Xóa</button>" +
 				"</div>";
 
 			ticketTypeList.appendChild(item);
@@ -825,6 +882,114 @@ document.addEventListener("DOMContentLoaded", function () {
 		ticketPriceInput.disabled = false;
 		ticketPriceInput.value = "";
 		ticketQuantityInput.value = "";
+		if (suggestTicketPriceBtn) {
+			suggestTicketPriceBtn.disabled = ticketAdjustLocked;
+			suggestTicketPriceBtn.textContent = "Gợi ý giá";
+		}
+	}
+
+	function buildSuggestPricePayload() {
+		const eventId = Number(initialEventData.eventId);
+		const eventTypeId = eventTypeSelect ? String(eventTypeSelect.value || "").trim() : "";
+		const location = (eventLocationInput && eventLocationInput.value ? eventLocationInput.value : "").trim();
+		const startTime = eventStartTimeInput ? String(eventStartTimeInput.value || "").trim() : "";
+		const endTime = eventEndTimeInput ? String(eventEndTimeInput.value || "").trim() : "";
+		const verifyMethod = document.querySelector('input[name="verifyMethod"]:checked');
+		const hasFaceReg = verifyMethod ? verifyMethod.value === "face" : true;
+
+		const limitMode = document.querySelector('input[name="limitMode"]:checked');
+		const isLimited = limitMode ? limitMode.value === "limited" : true;
+		const limitQuantity = isLimited ? String(limitQuantityInput ? limitQuantityInput.value || "" : "").trim() : "";
+
+		const ticketTypeName = (ticketNameInput && ticketNameInput.value ? ticketNameInput.value : "").trim();
+		const ticketQuantity = String(ticketQuantityInput ? ticketQuantityInput.value || "" : "").trim();
+		const saleStart = ticketSaleStartInput ? String(ticketSaleStartInput.value || "").trim() : "";
+		const saleEnd = ticketSaleEndInput ? String(ticketSaleEndInput.value || "").trim() : "";
+
+		return {
+			eventId: Number.isFinite(eventId) ? eventId : null,
+			eventTypeId: eventTypeId,
+			location: location,
+			startTime: startTime,
+			endTime: endTime,
+			hasFaceReg: hasFaceReg,
+			limitQuantity: limitQuantity,
+			ticketTypeName: ticketTypeName,
+			ticketQuantity: ticketQuantity,
+			saleStart: saleStart,
+			saleEnd: saleEnd,
+		};
+	}
+
+	function validateSuggestPriceInputs(data) {
+		if (ticketAdjustLocked) {
+			window.alert("Chỉ có thể gợi ý giá vé khi sự kiện đang xử lý (PENDING).");
+			return false;
+		}
+		if (!data.eventTypeId) {
+			window.alert("Vui lòng chọn thể loại sự kiện trước khi gợi ý giá.");
+			if (eventTypeSelect) {
+				eventTypeSelect.focus();
+			}
+			return false;
+		}
+		if (!data.location) {
+			window.alert("Vui lòng nhập địa điểm tổ chức trước khi gợi ý giá.");
+			if (eventLocationInput) {
+				eventLocationInput.focus();
+			}
+			return false;
+		}
+		if (!data.startTime || !data.endTime) {
+			window.alert("Vui lòng chọn thời gian bắt đầu/kết thúc trước khi gợi ý giá.");
+			if (eventStartTimeInput) {
+				eventStartTimeInput.focus();
+			}
+			return false;
+		}
+		if (!data.ticketTypeName) {
+			window.alert("Vui lòng nhập tên vé trước khi gợi ý giá.");
+			if (ticketNameInput) {
+				ticketNameInput.focus();
+			}
+			return false;
+		}
+		if (!data.ticketQuantity) {
+			window.alert("Vui lòng nhập tổng số lượng vé trước khi gợi ý giá.");
+			if (ticketQuantityInput) {
+				ticketQuantityInput.focus();
+			}
+			return false;
+		}
+		if (!data.saleStart || !data.saleEnd) {
+			window.alert("Vui lòng chọn đầy đủ thời gian bán vé trước khi gợi ý giá.");
+			if (ticketSaleStartInput) {
+				ticketSaleStartInput.focus();
+			}
+			return false;
+		}
+
+		if (new Date(data.endTime) < new Date(data.startTime)) {
+			window.alert("Thời gian kết thúc phải lớn hơn hoặc bằng thời gian bắt đầu.");
+			return false;
+		}
+		if (new Date(data.saleEnd) < new Date(data.saleStart)) {
+			window.alert("Thời gian kết thúc bán vé phải lớn hơn hoặc bằng thời gian bắt đầu.");
+			return false;
+		}
+		if (Number(data.ticketQuantity) <= 0) {
+			window.alert("Số lượng vé phải lớn hơn 0.");
+			return false;
+		}
+		if (data.limitQuantity && Number(data.limitQuantity) <= 0) {
+			window.alert("Giới hạn số lượng vé trên mỗi tài khoản phải lớn hơn 0.");
+			if (limitQuantityInput) {
+				limitQuantityInput.focus();
+			}
+			return false;
+		}
+
+		return true;
 	}
 
 	function toggleLimitQuantity() {
@@ -978,6 +1143,10 @@ document.addEventListener("DOMContentLoaded", function () {
 	});
 
 	openTicketFormBtn.addEventListener("click", function () {
+		if (ticketAdjustLocked) {
+			window.alert("Sự kiện đã công khai nên không thể điều chỉnh loại vé.");
+			return;
+		}
 		openTicketFormForCreate();
 	});
 
@@ -989,13 +1158,113 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (ticketFreeInput.checked) {
 			ticketPriceInput.value = "0";
 			ticketPriceInput.disabled = true;
+			if (suggestTicketPriceBtn) {
+				suggestTicketPriceBtn.disabled = true;
+			}
 		} else {
-			ticketPriceInput.disabled = false;
+			ticketPriceInput.disabled = ticketAdjustLocked;
+			if (suggestTicketPriceBtn) {
+				suggestTicketPriceBtn.disabled = ticketAdjustLocked;
+			}
 		}
 	});
 
+	if (suggestTicketPriceBtn) {
+		suggestTicketPriceBtn.addEventListener("click", function () {
+			if (ticketAdjustLocked) {
+				window.alert("Chỉ có thể gợi ý giá vé khi sự kiện đang xử lý (PENDING).");
+				return;
+			}
+			if (ticketFreeInput && ticketFreeInput.checked) {
+				ticketPriceInput.value = "0";
+				return;
+			}
+
+			const data = buildSuggestPricePayload();
+			if (!validateSuggestPriceInputs(data)) {
+				return;
+			}
+
+			setSuggestButtonLoading(true);
+
+			window
+				.fetch("/api/organizer/ticket-types/suggest-price", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						event: {
+							eventId: data.eventId,
+							eventTypeId: Number(data.eventTypeId),
+							location: data.location,
+							startTime: data.startTime,
+							endTime: data.endTime,
+							hasFaceReg: Boolean(data.hasFaceReg),
+							limitQuantity: data.limitQuantity ? Number(data.limitQuantity) : null,
+						},
+						tickets: [
+							{
+								ticketTypeName: data.ticketTypeName,
+								ticketQuantity: Number(data.ticketQuantity),
+								saleStart: data.saleStart,
+								saleEnd: data.saleEnd,
+							},
+						],
+					}),
+				})
+				.then(function (res) {
+					if (res.status === 401) {
+						throw new Error("unauthorized");
+					}
+					return res
+						.json()
+						.then(function (json) {
+							return { ok: res.ok, status: res.status, json: json };
+						})
+						.catch(function () {
+							return { ok: res.ok, status: res.status, json: null };
+						});
+				})
+				.then(function (result) {
+					if (!result.ok) {
+						const message = result && result.json && result.json.message ? result.json.message : "Không thể gợi ý giá vé.";
+						window.alert(message);
+						return;
+					}
+
+					const suggestions = result.json && result.json.suggestions ? result.json.suggestions : [];
+					const first = suggestions && suggestions.length ? suggestions[0] : null;
+					if (!first || typeof first.suggestedPrice !== "number") {
+						window.alert("Không nhận được giá gợi ý hợp lệ.");
+						return;
+					}
+
+					ticketPriceInput.disabled = false;
+					if (ticketFreeInput) {
+						ticketFreeInput.checked = false;
+					}
+					ticketPriceInput.value = String(first.suggestedPrice);
+				})
+				.catch(function (err) {
+					if (String(err && err.message) === "unauthorized") {
+						window.alert("Bạn cần đăng nhập tài khoản nhà tổ chức để dùng chức năng này.");
+						return;
+					}
+					window.alert("Không thể gợi ý giá vé. Vui lòng thử lại.");
+				})
+				.finally(function () {
+					setSuggestButtonLoading(false);
+				});
+		});
+	}
+
 	ticketTypeForm.addEventListener("submit", function (e) {
 		e.preventDefault();
+		if (ticketAdjustLocked) {
+			window.alert("Sự kiện đã công khai nên không thể điều chỉnh loại vé.");
+			return;
+		}
 
 		const editingTicket = editingTicketIndex >= 0 ? ticketTypes[editingTicketIndex] : null;
 		const rawTicketPrice = (ticketPriceInput.value || "").trim();
@@ -1052,6 +1321,9 @@ document.addEventListener("DOMContentLoaded", function () {
 	});
 
 	ticketTypeList.addEventListener("click", function (e) {
+		if (ticketAdjustLocked) {
+			return;
+		}
 		const editBtn = e.target.closest(".ticket-item__edit");
 		if (editBtn) {
 			const editIndex = Number(editBtn.getAttribute("data-index"));
@@ -1081,6 +1353,13 @@ document.addEventListener("DOMContentLoaded", function () {
 		}
 
 		renderTicketTypes();
+	});
+
+	const eventStatusInputs = Array.from(document.querySelectorAll('input[name="eventStatus"]'));
+	eventStatusInputs.forEach(function (input) {
+		input.addEventListener("change", function () {
+			applyTicketAdjustLock(getSelectedEventStatus());
+		});
 	});
 
 	eventForm.addEventListener("submit", function (e) {
@@ -1223,4 +1502,5 @@ document.addEventListener("DOMContentLoaded", function () {
 	setTicketFormEditingState(false);
 	updateFloatingEventActions();
 	renderTicketTypes();
+	applyTicketAdjustLock(getSelectedEventStatus());
 });
