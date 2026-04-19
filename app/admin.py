@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import redirect, request, session, url_for
+from flask import abort, flash, redirect, request, session, url_for
 from flask_admin import Admin, AdminIndexView, BaseView, expose
 from flask_admin.contrib.sqla import ModelView
 from flask_admin.contrib.sqla.filters import BaseSQLAFilter
 from markupsafe import Markup
 from sqlalchemy import func
+from wtforms import ValidationError
+from wtforms.fields import FileField
 
 from . import db
 from .models.booking import Booking
@@ -18,6 +20,12 @@ from .models.ticket import Ticket
 from .models.ticket_type import TicketType
 from .models.user import Admin as AdminRole
 from .models.user import Customer, Organizer, User
+from .services.cloudinary_service import cloudinary_service
+from .services.organizer_approval_service import (
+    get_organizer_approval_detail,
+    list_organizers_for_approval,
+    set_organizer_status,
+)
 
 
 def _is_admin() -> bool:
@@ -273,44 +281,40 @@ class AdminLogoutView(BaseView):
 class OrganizerApprovalView(BaseView):
     @expose("/")
     def index(self):
-        # UI-only: demo data to render the page layout.
-        rows = [
-            {
-                "name": "Nhà tổ chức 1",
-                "username": "organizer1",
-                "email": "organizer1@gmail.com",
-                "phone": "0453444443",
-                "status": "APPROVED",
-            },
-            {
-                "name": "Nhà tổ chức 2",
-                "username": "organizer2",
-                "email": "organizer2@gmail.com",
-                "phone": "0122345567",
-                "status": "REJECTED",
-            },
-            {
-                "name": "Nhà tổ chức 3",
-                "username": "organizer3",
-                "email": "organizer3@gmail.com",
-                "phone": "0829344487",
-                "status": "PENDING",
-            },
-            {
-                "name": "Nhà tổ chức 4",
-                "username": "organizer4",
-                "email": "organizer4@gmail.com",
-                "phone": "0899376589",
-                "status": "APPROVED",
-            },
-        ]
-
         filters = {
-            "q": request.args.get("q", ""),
-            "status": request.args.get("status", "all"),
+            "q": (request.args.get("q", "") or "").strip(),
+            "status": (request.args.get("status", "all") or "all").strip().lower(),
         }
 
+        rows = list_organizers_for_approval(q=filters["q"], status=filters["status"])
         return self.render("admin_organizer_approval.html", rows=rows, filters=filters)
+
+    @expose("/detail/<int:organizer_id>")
+    def detail(self, organizer_id: int):
+        detail = get_organizer_approval_detail(organizer_id=organizer_id)
+        if detail is None:
+            abort(404)
+        return self.render("admin_organizer_approval_detail.html", organizer=detail)
+
+    @expose("/approve/<int:organizer_id>", methods=["POST"])
+    def approve(self, organizer_id: int):
+        error = set_organizer_status(organizer_id=organizer_id, new_status="APPROVED")
+        if error:
+            flash(error, "error")
+        else:
+            flash("Duyệt nhà tổ chức thành công.", "success")
+
+        return redirect(request.referrer or url_for("admin_organizer_approval.index"))
+
+    @expose("/reject/<int:organizer_id>", methods=["POST"])
+    def reject(self, organizer_id: int):
+        error = set_organizer_status(organizer_id=organizer_id, new_status="REJECTED")
+        if error:
+            flash(error, "error")
+        else:
+            flash("Từ chối nhà tổ chức thành công.", "success")
+
+        return redirect(request.referrer or url_for("admin_organizer_approval.index"))
 
     def is_accessible(self) -> bool:
         return _is_admin()
@@ -419,6 +423,10 @@ class AdminDashboardIndexView(SecureAdminIndexView):
 
 
 class EventAdminView(SecureModelView):
+    form_extra_fields = {
+        "image_file": FileField("Ảnh sự kiện (upload)"),
+    }
+
     column_list = [
         "id",
         "title",
@@ -429,6 +437,23 @@ class EventAdminView(SecureModelView):
         "organizerId",
         "eventTypeId",
         "image",
+    ]
+
+    form_columns = [
+        "title",
+        "location",
+        "startTime",
+        "endTime",
+        "status",
+        "organizerId",
+        "eventTypeId",
+        "image_file",
+        "image",
+        "description",
+        "hasFaceReg",
+        "limitQuantity",
+        "createdAt",
+        "publishedAt",
     ]
 
     column_searchable_list = [
@@ -461,6 +486,91 @@ class EventAdminView(SecureModelView):
         "image": lambda v, c, m, p: EventAdminView._fmt_image(EventAdminView, getattr(m, "image", None)),
     }
 
+    def on_model_change(self, form, model, is_created):
+        file_storage = getattr(form, "image_file", None)
+        file_storage = getattr(file_storage, "data", None)
+
+        if file_storage is not None and getattr(file_storage, "filename", ""):
+            uploaded, error = cloudinary_service.upload_event_image(file_storage)
+            if error:
+                raise ValidationError(error)
+            if uploaded and uploaded.get("url"):
+                model.image = uploaded.get("url")
+
+        return super().on_model_change(form, model, is_created)
+
+
+class TicketTypeAdminView(SecureModelView):
+    column_auto_select_related = True
+
+    column_list = [
+        "id",
+        "name",
+        "event_title",
+        "event_type_name",
+        "organizer_display",
+        "price",
+        "quantity",
+        "saleStart",
+        "saleEnd",
+    ]
+
+    column_labels = {
+        "id": "ID",
+        "name": "Tên loại vé",
+        "event_title": "Sự kiện",
+        "event_type_name": "Thể loại sự kiện",
+        "organizer_display": "Nhà tổ chức",
+        "price": "Giá",
+        "quantity": "Số lượng",
+        "saleStart": "Mở bán",
+        "saleEnd": "Kết thúc bán",
+    }
+
+    column_searchable_list = [
+        "name",
+        "description",
+    ]
+
+    column_default_sort = ("id", True)
+    can_view_details = True
+
+    form_columns = [
+        "name",
+        "description",
+        "price",
+        "quantity",
+        "saleStart",
+        "saleEnd",
+        "event",
+    ]
+
+    form_excluded_columns = [
+        "eventId",
+    ]
+
+    def _fmt_dt(self, value):
+        if value is None:
+            return "—"
+        try:
+            return value.strftime("%d/%m/%Y %H:%M")
+        except Exception:
+            return str(value)
+
+    def _fmt_money(self, value):
+        if value is None:
+            return "—"
+        try:
+            return f"{float(value):,.0f}".replace(",", ".") + " đ"
+        except Exception:
+            return str(value)
+
+    column_formatters = {
+        "saleStart": lambda v, c, m, p: TicketTypeAdminView._fmt_dt(TicketTypeAdminView, getattr(m, "saleStart", None)),
+        "saleEnd": lambda v, c, m, p: TicketTypeAdminView._fmt_dt(TicketTypeAdminView, getattr(m, "saleEnd", None)),
+        "price": lambda v, c, m, p: TicketTypeAdminView._fmt_money(TicketTypeAdminView, getattr(m, "price", None)),
+    }
+
 
 def init_admin(app):
     """Initialize Flask-Admin at /admin and secure it to Admin users."""
@@ -480,7 +590,7 @@ def init_admin(app):
 
     admin.add_view(EventAdminView(Event, db.session, name="Sự kiện", endpoint="admin_events"))
     admin.add_view(SecureModelView(EventType, db.session, name="Thể loại sự kiện", endpoint="admin_event_types"))
-    admin.add_view(SecureModelView(TicketType, db.session, name="Loại vé", endpoint="admin_ticket_types"))
+    admin.add_view(TicketTypeAdminView(TicketType, db.session, name="Loại vé", endpoint="admin_ticket_types"))
 
     admin.add_view(BookingAdminView(Booking, db.session, name="Đơn mua", endpoint="admin_bookings"))
     admin.add_view(PaymentAdminView(Payment, db.session, name="Thanh toán", endpoint="admin_payments"))

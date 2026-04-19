@@ -6,29 +6,50 @@ def _b64url(b: bytes) -> str:
     return base64.urlsafe_b64encode(b).decode().rstrip("=")
 
 def _b64url_decode(s: str) -> bytes:
-    pad = '=' * (-len(s) % 4)
+    pad = "=" * (-len(s) % 4)
     return base64.urlsafe_b64decode(s + pad)
 
 def sign_payload(payload: dict) -> str:
     """
-    Tạo token QR: base64url(header).base64url(payload).base64url(signature)
+    Tạo token QR theo dạng:
+    base64url(header).base64url(payload).base64url(signature)
     """
     secret = current_app.config["QR_SECRET"].encode()
-    header = {"alg": "HS256", "typ": "QR"}
-    h = _b64url(json.dumps(header, separators=(",", ":"), ensure_ascii=False).encode())
-    p = _b64url(json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode())
-    sig = _b64url(hmac.new(secret, f"{h}.{p}".encode(), hashlib.sha256).digest())
+
+    header = {
+        "alg": "HS256",
+        "typ": "QR",
+    }
+
+    h = _b64url(
+        json.dumps(header, separators=(",", ":"), ensure_ascii=False).encode()
+    )
+    p = _b64url(
+        json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode()
+    )
+    sig = _b64url(
+        hmac.new(secret, f"{h}.{p}".encode(), hashlib.sha256).digest()
+    )
+
     return f"{h}.{p}.{sig}"
 
 def verify_token(token: str):
     """
-    Trả (is_valid: bool, payload: dict|None, message: str)
+    Kiểm tra token QR có hợp lệ không.
+    Trả về:
+    - is_valid: True/False
+    - payload: dict hoặc None
+    - message: mô tả
     """
     try:
         h, p, sig = token.split(".")
         secret = current_app.config["QR_SECRET"].encode()
-        expect = _b64url(hmac.new(secret, f"{h}.{p}".encode(), hashlib.sha256).digest())
-        if not hmac.compare_digest(expect, sig):
+
+        expected_sig = _b64url(
+            hmac.new(secret, f"{h}.{p}".encode(), hashlib.sha256).digest()
+        )
+
+        if not hmac.compare_digest(expected_sig, sig):
             return False, None, "Invalid signature"
         payload = json.loads(_b64url_decode(p))
         return True, payload, "OK"

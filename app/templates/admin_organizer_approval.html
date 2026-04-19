@@ -9,9 +9,9 @@
 <div class="organizer-approval-page">
     <h2 class="organizer-approval-title">Duyệt nhà tổ chức</h2>
 
-    <div class="organizer-approval-toolbar">
+    <form class="organizer-approval-toolbar" method="get" action="{{ url_for('admin_organizer_approval.index') }}">
         <div class="oa-search">
-            <input type="text" placeholder="Nhập từ khóa cần tìm kiếm" value="{{ filters.q }}" disabled />
+            <input type="text" name="q" placeholder="Nhập từ khóa cần tìm kiếm" value="{{ filters.q }}" />
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                 stroke-linejoin="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="8"></circle>
@@ -19,20 +19,20 @@
             </svg>
         </div>
 
-        <div class="oa-filter" aria-disabled="true">
-            <span class="oa-filter-left">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round" aria-hidden="true">
-                    <path d="M22 3H2l8 10v7l4 2v-9l8-10z"></path>
-                </svg>
-                <span>Tất cả</span>
-            </span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                stroke-linejoin="round" aria-hidden="true">
-                <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
+        <div class="oa-filter-wrap">
+            <select class="oa-filter" name="status" aria-label="Lọc theo trạng thái">
+                <option value="all" {% if (filters.status or 'all') == 'all' %}selected{% endif %}>Tất cả</option>
+                <option value="pending" {% if (filters.status or '') == 'pending' %}selected{% endif %}>Đang chờ</option>
+                <option value="approved" {% if (filters.status or '') == 'approved' %}selected{% endif %}>Đã duyệt</option>
+                <option value="rejected" {% if (filters.status or '') == 'rejected' %}selected{% endif %}>Đã từ chối</option>
+            </select>
         </div>
-    </div>
+
+        <div class="oa-toolbar-actions">
+            <button class="oa-action-btn primary" type="submit">Lọc</button>
+            <a class="oa-action-btn" href="{{ url_for('admin_organizer_approval.index') }}">Bỏ lọc</a>
+        </div>
+    </form>
 
     <div class="oa-table-wrap">
         <table class="table oa-table">
@@ -68,16 +68,14 @@
                     <td><span class="oa-status {{ status_class }}">{{ status_text }}</span></td>
                     <td>
                         <div class="oa-actions">
-                            {% if status_key == 'REJECTED' %}
-                            <button class="oa-btn approve" type="button" disabled>Duyệt</button>
-                            {% elif status_key == 'APPROVED' %}
-                            <button class="oa-btn reject" type="button" disabled>Từ chối</button>
-                            {% else %}
-                            <button class="oa-btn approve" type="button" disabled>Duyệt</button>
-                            <button class="oa-btn reject" type="button" disabled>Từ chối</button>
-                            {% endif %}
+                            <form method="post" action="{{ url_for('admin_organizer_approval.approve', organizer_id=row.id) }}" class="d-inline">
+                                <button class="oa-btn approve" type="submit" {% if status_key == 'APPROVED' %}disabled{% endif %}>Duyệt</button>
+                            </form>
+                            <form method="post" action="{{ url_for('admin_organizer_approval.reject', organizer_id=row.id) }}" class="d-inline">
+                                <button class="oa-btn reject" type="submit" {% if status_key == 'REJECTED' %}disabled{% endif %}>Từ chối</button>
+                            </form>
 
-                            <button class="oa-detail" type="button" title="Xem chi tiết" disabled>
+                            <a class="oa-detail" href="{{ url_for('admin_organizer_approval.detail', organizer_id=row.id) }}" title="Xem chi tiết">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -85,7 +83,7 @@
                                     <line x1="16" y1="13" x2="8" y2="13"></line>
                                     <line x1="16" y1="17" x2="8" y2="17"></line>
                                 </svg>
-                            </button>
+                            </a>
                         </div>
                     </td>
                 </tr>

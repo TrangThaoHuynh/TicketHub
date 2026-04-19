@@ -1,0 +1,54 @@
+{% extends 'admin/master.html' %}
+
+{% block head_css %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('login.static', filename='css/admin_organizer_approval.css') }}" />
+{% endblock %}
+
+{% block body %}
+<div class="organizer-approval-page">
+    <div class="oa-detail-header">
+        <h2 class="organizer-approval-title" style="margin-bottom: 0;">Chi tiết nhà tổ chức</h2>
+        <a class="oa-action-btn" href="{{ url_for('admin_organizer_approval.index') }}">Quay lại</a>
+    </div>
+
+    <div class="oa-detail-card">
+        <div class="oa-detail-row">
+            <div class="oa-detail-label">ID</div>
+            <div class="oa-detail-value">{{ organizer.id }}</div>
+        </div>
+        <div class="oa-detail-row">
+            <div class="oa-detail-label">Tên</div>
+            <div class="oa-detail-value">{{ organizer.name }}</div>
+        </div>
+        <div class="oa-detail-row">
+            <div class="oa-detail-label">Tên tài khoản</div>
+            <div class="oa-detail-value">{{ organizer.username }}</div>
+        </div>
+        <div class="oa-detail-row">
+            <div class="oa-detail-label">Email</div>
+            <div class="oa-detail-value">{{ organizer.email }}</div>
+        </div>
+        <div class="oa-detail-row">
+            <div class="oa-detail-label">Số điện thoại</div>
+            <div class="oa-detail-value">{{ organizer.phone }}</div>
+        </div>
+        <div class="oa-detail-row">
+            <div class="oa-detail-label">Trạng thái</div>
+            <div class="oa-detail-value">{{ organizer.status }}</div>
+        </div>
+        <div class="oa-detail-row">
+            <div class="oa-detail-label">Ngày tạo</div>
+            <div class="oa-detail-value">{{ organizer.created_at }}</div>
+        </div>
+        {% if organizer.avatar %}
+        <div class="oa-detail-row">
+            <div class="oa-detail-label">Avatar</div>
+            <div class="oa-detail-value">
+                <a href="{{ organizer.avatar }}" target="_blank" rel="noopener">Mở ảnh</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
