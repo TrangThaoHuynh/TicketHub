@@ -1,0 +1,586 @@
+{% extends "base.html" %} {% block styles %}
+<style>
+  .scan-page {
+    padding: 28px 0 36px;
+    background: #f7f8fb;
+    min-height: calc(100vh - 120px);
+  }
+
+  .scan-shell {
+    border: 1px solid #cfd4dc;
+    border-radius: 24px;
+    background: #fff;
+    padding: 22px;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+  }
+
+  .scan-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .scan-subtitle {
+    color: #6b7280;
+    font-size: 15px;
+    margin-bottom: 18px;
+    line-height: 1.5;
+  }
+
+  .scan-reader-box {
+    border-radius: 20px;
+    background: #eef2ff;
+    min-height: 370px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #reader {
+    width: 100%;
+    min-height: 370px;
+  }
+
+  .scan-actions {
+    margin-top: 16px;
+  }
+
+  .scan-actions .btn {
+    min-width: 150px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+
+  .scan-alert {
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+  }
+
+  .scan-alert.show {
+    display: flex;
+  }
+
+  .scan-alert-success {
+    background: #dff3e8;
+    border: 1px solid #b4dfc5;
+    color: #1f7a45;
+  }
+
+  .scan-alert-error {
+    background: #fde2e2;
+    border: 1px solid #f3b6b6;
+    color: #b33b3b;
+  }
+
+  .scan-form-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .scan-form-row label {
+    font-size: 18px;
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  .scan-form-row input {
+    flex: 1;
+    min-width: 220px;
+    border-radius: 10px;
+  }
+
+  .scan-result-card {
+    border: 1px solid #d9dee8;
+    border-radius: 20px;
+    padding: 20px 24px;
+    min-height: 320px;
+    background: #fff;
+  }
+
+  .scan-result-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+
+  .scan-result-item {
+    margin-bottom: 12px;
+    font-size: 16px;
+  }
+
+  .scan-result-item strong {
+    min-width: 140px;
+    display: inline-block;
+  }
+
+  .scan-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-transform: lowercase;
+  }
+
+  .scan-status-ready {
+    background: #dfeee5;
+    color: #2f6b49;
+  }
+
+  .scan-status-used {
+    background: #f5d7d7;
+    color: #9d3030;
+  }
+
+  .scan-status-pending {
+    background: #fff1cc;
+    color: #9a6b00;
+  }
+
+  .scan-status-cancelled {
+    background: #ececec;
+    color: #555;
+  }
+
+  .scan-confirm-wrap {
+    margin-top: 22px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .scan-confirm-wrap .btn {
+    min-width: 180px;
+    border-radius: 12px;
+    font-weight: 700;
+  }
+
+  .scan-empty {
+    color: #6b7280;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 991.98px) {
+    .scan-shell {
+      padding: 18px;
+    }
+
+    .scan-reader-box,
+    #reader {
+      min-height: 300px;
+    }
+  }
+</style>
+{% endblock %} {% block content %}
+<section class="scan-page">
+  <div class="container">
+    <div class="scan-shell">
+      <div class="row g-4">
+        <div class="col-lg-5">
+          <div class="scan-title">
+            <i class="fa-solid fa-qrcode me-2"></i>Quét khuôn mặt/QR vé sự kiện
+          </div>
+          <div class="scan-subtitle">
+            Đưa vé QR hoặc nhập mã vé để kiểm tra trước khi xác nhận khách vào
+            cổng.
+            <br />
+            Sự kiện hiện tại: <strong>{{ event.title }}</strong>
+          </div>
+
+          <div class="scan-reader-box">
+            <div id="reader"></div>
+          </div>
+
+          <div class="scan-actions d-flex gap-2">
+            <button id="btnStart" class="btn btn-primary">Bắt đầu quét</button>
+            <button id="btnStop" class="btn btn-outline-secondary">Dừng</button>
+          </div>
+        </div>
+
+        <div class="col-lg-7">
+          <div id="successBox" class="scan-alert scan-alert-success">
+            <i class="fa-solid fa-circle-check"></i>
+            <span id="successText">Check-in thành công</span>
+          </div>
+
+          <div id="errorBox" class="scan-alert scan-alert-error">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span id="errorText">Vé không hợp lệ</span>
+          </div>
+
+          <div class="scan-form-row">
+            <label for="ticketCodeInput">Nhập mã vé:</label>
+            <input
+              type="text"
+              id="ticketCodeInput"
+              class="form-control"
+              placeholder="Ví dụ: TKT-ABC123XYZ"
+            />
+            <button id="btnCheckCode" class="btn btn-outline-primary">
+              Kiểm tra
+            </button>
+          </div>
+
+          <div class="scan-result-card">
+            <div class="scan-result-title">Thông tin vé</div>
+
+            <div id="ticketInfoEmpty" class="scan-empty">
+              Chưa có dữ liệu vé. Hãy quét QR hoặc nhập mã vé để kiểm tra.
+            </div>
+
+            <div id="ticketInfoDetail" style="display: none">
+              <div class="scan-result-item">
+                <strong>Mã vé:</strong>
+                <span id="detailTicketCode"></span>
+              </div>
+
+              <div class="scan-result-item">
+                <strong>Họ và tên:</strong>
+                <span id="detailFullName"></span>
+              </div>
+
+              <div class="scan-result-item">
+                <strong>Sự kiện:</strong>
+                <span id="detailEventTitle"></span>
+              </div>
+
+              <div class="scan-result-item">
+                <strong>Loại vé:</strong>
+                <span id="detailTicketType"></span>
+              </div>
+
+              <div class="scan-result-item">
+                <strong>Thời gian:</strong>
+                <span id="detailEventTime"></span>
+              </div>
+
+              <div class="scan-result-item">
+                <strong>Trạng thái:</strong>
+                <span id="detailStatusBadge" class="scan-status-badge"></span>
+              </div>
+
+              <div class="scan-result-item">
+                <strong>Kết quả đối chiếu:</strong>
+                <span id="detailValidationResult"></span>
+              </div>
+
+              <div class="scan-result-item">
+                <strong>Số điện thoại:</strong>
+                <span id="detailPhoneNumber"></span>
+              </div>
+
+              <div
+                class="scan-result-item"
+                id="checkedInRow"
+                style="display: none"
+              >
+                <strong>Đã check-in lúc:</strong>
+                <span id="detailCheckedInAt"></span>
+              </div>
+
+              <div class="scan-confirm-wrap">
+                <button id="btnConfirmCheckin" class="btn btn-success" disabled>
+                  Xác nhận check-in
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  </div>
+</section>
+{% endblock %} {% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const eventId = {{ event.id | tojson }};
+
+    const btnStart = document.getElementById("btnStart");
+    const btnStop = document.getElementById("btnStop");
+    const btnCheckCode = document.getElementById("btnCheckCode");
+    const btnConfirmCheckin = document.getElementById("btnConfirmCheckin");
+    const ticketCodeInput = document.getElementById("ticketCodeInput");
+
+    const successBox = document.getElementById("successBox");
+    const successText = document.getElementById("successText");
+    const errorBox = document.getElementById("errorBox");
+    const errorText = document.getElementById("errorText");
+
+    const ticketInfoEmpty = document.getElementById("ticketInfoEmpty");
+    const ticketInfoDetail = document.getElementById("ticketInfoDetail");
+
+    const detailTicketCode = document.getElementById("detailTicketCode");
+    const detailFullName = document.getElementById("detailFullName");
+    const detailEventTitle = document.getElementById("detailEventTitle");
+    const detailTicketType = document.getElementById("detailTicketType");
+    const detailEventTime = document.getElementById("detailEventTime");
+    const detailStatusBadge = document.getElementById("detailStatusBadge");
+    const detailValidationResult = document.getElementById("detailValidationResult");
+    const detailPhoneNumber = document.getElementById("detailPhoneNumber");
+    const checkedInRow = document.getElementById("checkedInRow");
+    const detailCheckedInAt = document.getElementById("detailCheckedInAt");
+
+    let currentTicketId = null;
+    let scanning = false;
+    let qrReader = null;
+
+    function showSuccess(message) {
+      successText.textContent = message || "Check-in thành công";
+      successBox.classList.add("show");
+      errorBox.classList.remove("show");
+    }
+
+    function showError(message) {
+      errorText.textContent = message || "Có lỗi xảy ra";
+      errorBox.classList.add("show");
+      successBox.classList.remove("show");
+    }
+
+    function hideAlerts() {
+      successBox.classList.remove("show");
+      errorBox.classList.remove("show");
+    }
+
+    function resetResultCard() {
+      currentTicketId = null;
+      btnConfirmCheckin.disabled = true;
+      ticketInfoEmpty.style.display = "block";
+      ticketInfoDetail.style.display = "none";
+    }
+
+    function setStatusBadge(status, label) {
+      const statusNorm = String(status || "").toUpperCase();
+      detailStatusBadge.className = "scan-status-badge";
+
+      if (statusNorm === "USED") {
+        detailStatusBadge.classList.add("scan-status-used");
+      } else if (statusNorm === "PENDING") {
+        detailStatusBadge.classList.add("scan-status-pending");
+      } else if (statusNorm === "CANCELLED") {
+        detailStatusBadge.classList.add("scan-status-cancelled");
+      } else {
+        detailStatusBadge.classList.add("scan-status-ready");
+      }
+
+      detailStatusBadge.textContent = label || "không xác định";
+    }
+
+    function renderTicketInfo(data, canCheckin) {
+      const ticket = data.ticket || {};
+      const event = data.event || {};
+      const ticketType = data.ticket_type || {};
+      const validation = data.validation || {};
+
+      detailTicketCode.textContent = ticket.ticket_code || "";
+      detailFullName.textContent = ticket.full_name || "";
+      detailEventTitle.textContent = event.title || "";
+      detailTicketType.textContent = ticketType.name || "";
+      detailEventTime.textContent = event.time_text || "";
+      detailValidationResult.textContent = validation.result || "";
+      detailPhoneNumber.textContent = ticket.phone_number || "";
+
+      setStatusBadge(ticket.status, ticket.status_label);
+
+      if (ticket.checked_in_at) {
+        checkedInRow.style.display = "block";
+        detailCheckedInAt.textContent = ticket.checked_in_at;
+      } else {
+        checkedInRow.style.display = "none";
+        detailCheckedInAt.textContent = "";
+      }
+
+      currentTicketId = ticket.id || null;
+      btnConfirmCheckin.disabled = !canCheckin || !currentTicketId;
+
+      ticketInfoEmpty.style.display = "none";
+      ticketInfoDetail.style.display = "block";
+    }
+
+    async function postJson(url, payload) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      return response.json();
+    }
+
+    async function validateByQr(qrText) {
+      hideAlerts();
+
+      const result = await postJson("/api/qr/validate", {
+        event_id: eventId,
+        qr: qrText,
+      });
+
+      if (result.ok) {
+        renderTicketInfo(result, true);
+        showSuccess(result.message || "Vé hợp lệ. Có thể xác nhận check-in.");
+        return;
+      }
+
+      if (result.ticket) {
+        renderTicketInfo(result, false);
+      } else {
+        resetResultCard();
+      }
+
+      showError(result.message || "QR không hợp lệ.");
+    }
+
+    async function validateByTicketCode() {
+      const ticketCode = ticketCodeInput.value.trim();
+      if (!ticketCode) {
+        showError("Bạn chưa nhập mã vé.");
+        return;
+      }
+
+      hideAlerts();
+
+      const result = await postJson("/api/qr/validate", {
+        event_id: eventId,
+        ticket_code: ticketCode,
+      });
+
+      if (result.ok) {
+        renderTicketInfo(result, true);
+        showSuccess(result.message || "Mã vé hợp lệ. Có thể xác nhận check-in.");
+        return;
+      }
+
+      if (result.ticket) {
+        renderTicketInfo(result, false);
+      } else {
+        resetResultCard();
+      }
+
+      showError(result.message || "Mã vé không hợp lệ.");
+    }
+
+    async function confirmCheckin() {
+      if (!currentTicketId) {
+        showError("Chưa có vé hợp lệ để xác nhận check-in.");
+        return;
+      }
+
+      hideAlerts();
+
+      const result = await postJson("/api/qr/check-in", {
+        event_id: eventId,
+        ticket_id: currentTicketId,
+      });
+
+      if (result.ok) {
+        renderTicketInfo(result, false);
+        btnConfirmCheckin.disabled = true;
+        showSuccess(result.message || "Check-in thành công.");
+
+        if (scanning) {
+          await stopScanner();
+        }
+        return;
+      }
+
+      if (result.ticket) {
+        renderTicketInfo(result, false);
+      } else {
+        resetResultCard();
+      }
+
+      showError(result.message || "Không thể xác nhận check-in.");
+    }
+
+    async function startScanner() {
+      if (scanning) return;
+
+      hideAlerts();
+
+      if (typeof Html5Qrcode === "undefined") {
+        showError("Không thể tải thư viện quét QR. Hãy tải lại trang.");
+        return;
+      }
+
+      try {
+        if (!qrReader) {
+          qrReader = new Html5Qrcode("reader");
+        }
+
+        const cameras = await Html5Qrcode.getCameras();
+        if (!cameras || cameras.length === 0) {
+          showError("Thiết bị không tìm thấy camera.");
+          return;
+        }
+
+        await qrReader.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 260, height: 260 },
+            aspectRatio: 1.0,
+          },
+          async (decodedText) => {
+            if (!decodedText) return;
+            await validateByQr(decodedText);
+          },
+          () => {}
+        );
+
+        scanning = true;
+        btnStart.disabled = true;
+        btnStop.disabled = false;
+      } catch (error) {
+        showError("Không thể mở camera. Hãy kiểm tra quyền truy cập camera.");
+      }
+    }
+
+    async function stopScanner() {
+      if (!qrReader || !scanning) {
+        btnStart.disabled = false;
+        btnStop.disabled = true;
+        scanning = false;
+        return;
+      }
+
+      try {
+        await qrReader.stop();
+        await qrReader.clear();
+      } catch (_) {}
+
+      scanning = false;
+      btnStart.disabled = false;
+      btnStop.disabled = true;
+    }
+
+    btnStart.addEventListener("click", startScanner);
+    btnStop.addEventListener("click", stopScanner);
+    btnCheckCode.addEventListener("click", validateByTicketCode);
+    btnConfirmCheckin.addEventListener("click", confirmCheckin);
+
+    ticketCodeInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        validateByTicketCode();
+      }
+    });
+
+    btnStop.disabled = true;
+    resetResultCard();
+  });
+</script>
+{% endblock %}

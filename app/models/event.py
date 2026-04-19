@@ -21,3 +21,26 @@ class Event(db.Model):
     
     eventType = db.relationship("EventType", backref="events")
     organizer = db.relationship("Organizer", backref="events")
+
+    def __str__(self) -> str:
+        title = (self.title or "").strip() or "(Chưa đặt tên sự kiện)"
+        parts = [title]
+
+        event_type = getattr(self, "eventType", None)
+        if event_type is not None:
+            event_type_name = (getattr(event_type, "name", None) or "").strip()
+            if event_type_name:
+                parts.append(event_type_name)
+
+        organizer = getattr(self, "organizer", None)
+        if organizer is not None:
+            organizer_user = getattr(organizer, "user", None)
+            organizer_name = (getattr(organizer_user, "name", None) or "").strip() if organizer_user else ""
+            if organizer_name:
+                parts.append(organizer_name)
+
+        suffix = " · ".join(parts)
+        return f"{suffix} (#{self.id})" if self.id is not None else suffix
+
+    def __repr__(self) -> str:
+        return f"<Event id={self.id!r} title={self.title!r}>"

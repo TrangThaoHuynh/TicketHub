@@ -793,33 +793,3 @@ def event_details(event_id: int):
         t.remaining = max(0, (t.quantity or 0) - sold)
 
     return render_template("event_detail.html", event=event, ticket_types=ticket_types)
-
-
-@event_bp.route("/events/<int:event_id>/confirm-ticket-info")
-def confirm_ticket_info(event_id: int):
-    event = get_event_by_id(event_id)
-    if not event:
-        abort(404)
-
-    ticket_types = get_ticket_types_by_event_id(event_id) or []
-    sold_map = count_sold_by_ticket_type([t.id for t in ticket_types])
-
-    ticket_types_payload = []
-    for t in ticket_types:
-        sold = sold_map.get(t.id, 0)
-        ticket_types_payload.append(
-            {
-                "id": t.id,
-                "name": t.name or "",
-                "description": t.description or "",
-                "price": float(t.price or 0),
-                "remaining": max(0, (t.quantity or 0) - sold),
-            }
-        )
-
-    return render_template(
-        "confirm_ticket_info.html",
-        event=event,
-        ticket_types_payload=ticket_types_payload,
-        show_search=False,
-    )
