@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TicketHub - Cập nhật trạng thái nhà tổ chức</title>
+  </head>
+  <body>
+    <p>Xin chào {{ organizer_name }},</p>
+
+    {% if new_status == 'APPROVED' %}
+      <p>
+        Yêu cầu đăng ký <strong>Nhà tổ chức</strong> của bạn đã được <strong>duyệt</strong>.
+        Bây giờ bạn có thể đăng nhập và bắt đầu tạo sự kiện trên TicketHub.
+      </p>
+    {% elif new_status == 'REJECTED' %}
+      <p>
+        Yêu cầu đăng ký <strong>Nhà tổ chức</strong> của bạn đã bị <strong>từ chối</strong>.
+        Nếu bạn cần hỗ trợ hoặc muốn bổ sung thông tin, vui lòng liên hệ đội ngũ TicketHub.
+      </p>
+    {% else %}
+      <p>
+        Trạng thái tài khoản nhà tổ chức của bạn vừa được cập nhật: <strong>{{ new_status }}</strong>.
+      </p>
+    {% endif %}
+
+    <p>Trân trọng,<br />TicketHub</p>
+  </body>
+</html>

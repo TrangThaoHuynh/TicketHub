@@ -3,6 +3,7 @@ from datetime import datetime
 from app import db
 from app.models.enums import OrganizerStatus
 from app.models.user import Admin, Organizer, User
+import app.services.organizer_approval_service as organizer_approval_service
 
 
 def _seed_organizer_statuses():
@@ -145,10 +146,17 @@ def test_admin_organizer_approval_detail_404_when_missing(app):
     assert res.status_code == 404
 
 
-def test_admin_can_approve_pending_organizer(app):
+def test_admin_can_approve_pending_organizer(app, monkeypatch):
     client = app.test_client()
 
     org_user_id = None
+    sent = []
+
+    def _fake_send_email(*, organizer_user, new_status):
+        sent.append((organizer_user.id, new_status))
+        return True
+
+    monkeypatch.setattr(organizer_approval_service, "send_organizer_status_email", _fake_send_email)
 
     with app.app_context():
         _seed_organizer_statuses()
@@ -189,6 +197,8 @@ def test_admin_can_approve_pending_organizer(app):
         organizer = db.session.get(Organizer, org_user_id)
         assert organizer is not None
         assert organizer.status == "APPROVED"
+
+    assert sent == [(org_user_id, "APPROVED")]
 
 
 def test_admin_can_approve_rejected_organizer(app):
@@ -237,10 +247,17 @@ def test_admin_can_approve_rejected_organizer(app):
         assert organizer.status == "APPROVED"
 
 
-def test_admin_can_reject_pending_organizer(app):
+def test_admin_can_reject_pending_organizer(app, monkeypatch):
     client = app.test_client()
 
     org_user_id = None
+    sent = []
+
+    def _fake_send_email(*, organizer_user, new_status):
+        sent.append((organizer_user.id, new_status))
+        return True
+
+    monkeypatch.setattr(organizer_approval_service, "send_organizer_status_email", _fake_send_email)
 
     with app.app_context():
         _seed_organizer_statuses()
@@ -281,3 +298,5 @@ def test_admin_can_reject_pending_organizer(app):
         organizer = db.session.get(Organizer, org_user_id)
         assert organizer is not None
         assert organizer.status == "REJECTED"
+
+    assert sent == [(org_user_id, "REJECTED")]

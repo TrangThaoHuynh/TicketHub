@@ -44,7 +44,9 @@ def _seed_lookup_tables():
         OrganizerStatus: ["PENDING", "APPROVED", "REJECTED"],
         PaymentStatus: ["SUCCESS", "FAILED"],
         TicketStatus: ["PENDING", "VALID", "USED", "CANCELLED"],
+
         EventStatus: ["PENDING", "PUBLISHED", "FINISHED", "CANCELLED"],
+
     }
 
     changed = False

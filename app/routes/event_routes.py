@@ -15,10 +15,98 @@ from ..services import create_event, create_ticket_type, get_ticket_type_by_even
 from ..services.cloudinary_service import cloudinary_service
 from ..services.event_service import get_event_by_id, get_event_types
 from ..services.ticket_service import get_ticket_types_by_event_id, count_sold_by_ticket_type
+from ..services.ticket_price_suggestion_service import TicketPriceSuggester
 
 event_bp = Blueprint('event', __name__)
 
+_ticket_price_suggester = TicketPriceSuggester()
+
 ALLOWED_EVENT_STATUSES = {"PENDING", "PUBLISHED"}
+
+
+@event_bp.route('/api/organizer/ticket-types/suggest-price', methods=['POST'])
+def suggest_ticket_type_price():
+    user_id = session.get('user_id')
+    organizer = db.session.get(Organizer, user_id) if user_id else None
+    if organizer is None:
+        return jsonify({"error": "unauthorized"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    event_payload = payload.get("event") if isinstance(payload, dict) else None
+    event_payload = event_payload if isinstance(event_payload, dict) else {}
+    tickets_payload = payload.get("tickets") if isinstance(payload, dict) else None
+
+    if tickets_payload is None:
+        # allow single-ticket payload for convenience
+        tickets_payload = [payload] if isinstance(payload, dict) else []
+
+    if not isinstance(tickets_payload, list) or not tickets_payload:
+        return jsonify({"error": "invalid_payload", "message": "Missing tickets"}), 400
+
+    event_type_id = _parse_positive_int(event_payload.get("eventTypeId") or payload.get("eventTypeId"))
+    if event_type_id is None:
+        return jsonify({"error": "invalid_payload", "message": "Missing eventTypeId"}), 400
+
+    event_type = db.session.get(EventType, event_type_id)
+    event_type_name = (event_payload.get("eventTypeName") or getattr(event_type, "name", "") or "").strip()
+
+    location = (event_payload.get("location") or payload.get("location") or "").strip()
+    start_time = _parse_datetime_local(event_payload.get("startTime") or payload.get("startTime"))
+    end_time = _parse_datetime_local(event_payload.get("endTime") or payload.get("endTime"))
+
+    has_face_reg = bool(event_payload.get("hasFaceReg") if "hasFaceReg" in event_payload else payload.get("hasFaceReg"))
+    limit_quantity = event_payload.get("limitQuantity") if "limitQuantity" in event_payload else payload.get("limitQuantity")
+    if limit_quantity in ("", None):
+        limit_quantity = None
+    else:
+        limit_quantity = _parse_positive_int(limit_quantity)
+
+    suggester = _ticket_price_suggester
+    suggestions = []
+
+    for ticket in tickets_payload:
+        if not isinstance(ticket, dict):
+            continue
+
+        ticket_type_name = (ticket.get("ticketTypeName") or ticket.get("name") or "").strip()
+        ticket_quantity = _parse_positive_int(ticket.get("ticketQuantity") or ticket.get("quantity"))
+        if ticket_quantity is None:
+            ticket_quantity = 1
+
+        sale_start = _parse_datetime_local(ticket.get("saleStart"))
+        sale_end = _parse_datetime_local(ticket.get("saleEnd"))
+
+        result = suggester.suggest_price(
+            organizer_id=organizer.id,
+            event_type_id=event_type_id,
+            event_type_name=event_type_name,
+            location=location,
+            has_face_reg=has_face_reg,
+            limit_quantity=limit_quantity,
+            start_time=start_time,
+            end_time=end_time,
+            sale_start=sale_start,
+            sale_end=sale_end,
+            ticket_type_name=ticket_type_name,
+            ticket_quantity=ticket_quantity,
+        )
+
+        suggestions.append(
+            {
+                "ticketTypeName": ticket_type_name,
+                "ticketQuantity": ticket_quantity,
+                "suggestedPrice": result.suggested_price,
+                "source": result.source,
+            }
+        )
+
+    return jsonify(
+        {
+            "eventTypeId": event_type_id,
+            "eventTypeName": event_type_name,
+            "suggestions": suggestions,
+        }
+    )
 
 
 def _parse_datetime_local(value):
