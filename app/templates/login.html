@@ -12,10 +12,17 @@
 	<div class="login-container">
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-    <div class="flash-messages">
+    <div class="flash-messages" aria-live="polite" aria-atomic="true">
         {% for category, message in messages %}
-        <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' }}" role="alert">
-            {{ message }}
+        {% set is_danger = category == 'danger' %}
+        <div class="alert alert-{{ 'danger' if is_danger else 'success' }} floating-alert" role="alert">
+            <div class="alert-content">
+                <i class="fas {{ 'fa-triangle-exclamation' if is_danger else 'fa-circle-check' }}" aria-hidden="true"></i>
+                <span>{{ message }}</span>
+            </div>
+            <button type="button" class="alert-close" aria-label="Đóng thông báo">
+                <i class="fas fa-xmark" aria-hidden="true"></i>
+            </button>
         </div>
         {% endfor %}
     </div>
