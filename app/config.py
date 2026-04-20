@@ -7,7 +7,6 @@ FACE_MODEL_NAME = "Facenet512"
 FACE_DETECTOR_BACKEND = "opencv"
 FACE_MATCH_THRESHOLD = 0.35
 
-
 def _load_dotenv(path):
     if not os.path.exists(path):
         return
