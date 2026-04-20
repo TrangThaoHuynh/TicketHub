@@ -1,7 +1,7 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/event_detail.css') }}">
+<link rel="stylesheet" href="{{ url_for('login.static', filename='css/event_detail.css') }}" />
 {% endblock %}
 
 {% block content %}
@@ -71,13 +71,51 @@
   <div class="container">
     <div class="row g-4">
       <div class="col-lg-8">
+
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5><i class="fas fa-ticket-alt me-2"></i>Loại vé</h5>
+
+            {% if ticket_types|length == 0 %}
+            <div class="alert alert-light mb-0"
+              style="background: rgba(148, 163, 255, 0.1); color: #94a3ff; border: 1px solid rgba(148, 163, 255, 0.2);">
+              Hiện chưa có loại vé.
+            </div>
+            {% else %}
+            {% for t in ticket_types %}
+            <div class="ticket-type-card {% if not loop.last %}mb-3{% endif %}">
+              <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                  <div class="fw-semibold">{{ t.name }}</div>
+                  <div class="small text-muted mb-1">{{ t.description or 'Chưa có mô tả' }}</div>
+                </div>
+
+                <div class="ticket-type-right ms-2">
+                  <div class="ticket-price">
+                    {{ "{:,.0f}".format((t.price or 0)|float) }} VNĐ
+                  </div>
+
+                  <button class="btn btn-outline-primary btn-sm add-ticket-btn" type="button"
+                    data-ticket-id="{{ t.id }}" data-ticket-name="{{ t.name }}"
+                    data-ticket-description="{{ t.description or '' }}" data-price="{{ t.price or 0 }}"
+                    data-max="{{ t.remaining|int }}" {{ 'disabled' if t.remaining|int==0 }}>
+                    Thêm
+                  </button>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-body">
             <h5><i class="fas fa-info-circle me-2"></i>Giới thiệu</h5>
             {% if event.description %}
-              <div class="mb-0 event-description-content">{{ event.description|safe }}</div>
+            <div class="mb-0 event-description-content">{{ event.description|safe }}</div>
             {% else %}
-              <p class="mb-0">Đang cập nhật mô tả.</p>
+            <p class="mb-0">Đang cập nhật mô tả.</p>
             {% endif %}
           </div>
         </div>
@@ -88,42 +126,8 @@
           <div class="card-body">
             <h5><i class="fas fa-ticket-alt me-2"></i>Chọn loại vé</h5>
 
-            {% if ticket_types|length == 0 %}
-            <div class="alert alert-light mb-0"
-              style="background: rgba(148, 163, 255, 0.1); color: #94a3ff; border: 1px solid rgba(148, 163, 255, 0.2);">
-              Hiện chưa có loại vé.
-            </div>
-            {% else %}
-            {% for t in ticket_types %}
-            <div class="ticket-type-card">
-              <div class="d-flex justify-content-between align-items-start">
-                <div class="flex-grow-1">
-                  <div class="fw-semibold">{{ t.name }}</div>
-                  <div class="small text-muted mb-1">{{ t.description or 'Chưa có mô tả' }}</div>
-                  <div class="small {{ 'text-success' if t.remaining > 0 else 'text-danger' }}">
-                    {{ 'Còn ' ~ t.remaining ~ ' vé' if t.remaining > 0 else 'Hết vé' }}
-                  </div>
-                </div>
-
-                <div class="text-end ms-2" style="min-width: 190px;">
-                  <div class="text-primary">
-                    {{ "{:,.0f}".format((t.price or 0)|float) }} VNĐ
-                  </div>
-
-                  <div class="input-group input-group-sm mt-1">
-                    <button class="btn btn-outline-secondary qty-btn" type="button" data-ticket-id="{{ t.id }}"
-                      data-delta="-1" data-max="{{ t.remaining|int }}">−</button>
-                    <input class="form-control text-center qty-input" id="qty-{{ t.id }}" type="number" min="0"
-                      max="{{ t.remaining|int }}" value="0" data-ticket-id="{{ t.id }}"
-                      data-ticket-name="{{ t.name }}" data-ticket-description="{{ t.description or '' }}"
-                      data-price="{{ t.price or 0 }}" {{ 'disabled' if t.remaining|int == 0 }}>
-                    <button class="btn btn-outline-secondary qty-btn" type="button" data-ticket-id="{{ t.id }}"
-                      data-delta="1" data-max="{{ t.remaining|int }}">+</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {% endfor %}
+            <div id="selected-ticket-empty">Chưa có loại vé nào được chọn.</div>
+            <div id="selected-ticket-list"></div>
 
             <div class="d-flex justify-content-between align-items-center mt-3">
               <div style="color: #cbd5e1;">Tạm tính</div>
@@ -135,7 +139,6 @@
               data-confirm-url="{{ url_for('event.confirm_ticket_info', event_id=event.id) }}">
               <i class="fas fa-shopping-cart me-2"></i>Mua vé
             </button>
-            {% endif %}
           </div>
         </div>
       </div>
@@ -145,5 +148,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/event_detail.js') }}"></script>
+<script src="{{ url_for('login.static', filename='js/event_detail.js') }}"></script>
 {% endblock %}

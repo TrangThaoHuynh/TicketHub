@@ -68,12 +68,17 @@
                     <td><span class="oa-status {{ status_class }}">{{ status_text }}</span></td>
                     <td>
                         <div class="oa-actions">
-                            <form method="post" action="{{ url_for('admin_organizer_approval.approve', organizer_id=row.id) }}" class="d-inline">
-                                <button class="oa-btn approve" type="submit" {% if status_key == 'APPROVED' %}disabled{% endif %}>Duyệt</button>
+                            {% if status_key != 'APPROVED' %}
+                            <form method="post" action="{{ url_for('admin_organizer_approval.approve', organizer_id=row.id) }}" style="display:inline">
+                                <button class="oa-btn approve" type="submit">Duyệt</button>
                             </form>
-                            <form method="post" action="{{ url_for('admin_organizer_approval.reject', organizer_id=row.id) }}" class="d-inline">
-                                <button class="oa-btn reject" type="submit" {% if status_key == 'REJECTED' %}disabled{% endif %}>Từ chối</button>
+                            {% endif %}
+
+                            {% if status_key != 'REJECTED' %}
+                            <form method="post" action="{{ url_for('admin_organizer_approval.reject', organizer_id=row.id) }}" style="display:inline">
+                                <button class="oa-btn reject" type="submit">Từ chối</button>
                             </form>
+                            {% endif %}
 
                             <a class="oa-detail" href="{{ url_for('admin_organizer_approval.detail', organizer_id=row.id) }}" title="Xem chi tiết">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"

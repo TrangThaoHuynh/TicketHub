@@ -13,8 +13,8 @@ from flask import (
     url_for,
 )
 from flask_mail import Message
-from flask_login import login_user
-from .. import mail, oauth
+from flask_login import login_user, logout_user
+from .. import db, mail, oauth
 from ..services.cloudinary_service import cloudinary_service
 from ..services import (
     assign_user_role,
@@ -28,7 +28,7 @@ from ..services import (
     verify_forgot_password_code,
 )
 
-from ..models.user import Admin as AdminRole
+from ..models.user import Admin as AdminRole, Organizer
 
 login_bp = Blueprint(
     'login',
@@ -41,6 +41,8 @@ FORGOT_PASSWORD_SESSION_KEY = 'forgot_password_user_id'
 FORGOT_PASSWORD_SUBJECT = 'Ma xac nhan dat lai mat khau TicketHub'
 GOOGLE_OAUTH_SCOPE = 'openid email profile'
 GOOGLE_ROLE_SESSION_KEY = 'google_role_user_id'
+ORGANIZER_PENDING_LOGIN_MESSAGE = 'Vui lòng chờ xét duyệt thông tin từ quản trị viên.'
+ORGANIZER_REJECTED_LOGIN_MESSAGE = 'Tài khoản này đã bị từ chối, hãy phản hồi qua email quản trị viên để biết thêm thông tin chi tiết.'
 
 
 def _request_payload():
@@ -86,6 +88,26 @@ def _safe_next_path(next_value: str | None) -> str | None:
     if not next_value.startswith("/"):
         return None
     return next_value
+
+
+def _get_organizer_status(user_id: int | None) -> str | None:
+    if not user_id:
+        return None
+
+    organizer = db.session.get(Organizer, user_id)
+    if organizer is None:
+        return None
+
+    return (organizer.status or 'PENDING').strip().upper()
+
+
+def _get_organizer_login_notice(user_id: int | None) -> str | None:
+    status = _get_organizer_status(user_id)
+    if status == 'PENDING':
+        return ORGANIZER_PENDING_LOGIN_MESSAGE
+    if status == 'REJECTED':
+        return ORGANIZER_REJECTED_LOGIN_MESSAGE
+    return None
 
 
 def _validate_mail_settings():
@@ -231,6 +253,12 @@ def login_google_callback():
         flash(error, 'danger')
         return redirect(url_for('login.login'))
 
+    organizer_notice = _get_organizer_login_notice(user.id)
+    if organizer_notice:
+        session.pop(GOOGLE_ROLE_SESSION_KEY, None)
+        flash(organizer_notice, 'danger')
+        return redirect(url_for('login.login'))
+
     login_user(user)
     session['user_id'] = user.id
     session['username'] = user.username
@@ -271,9 +299,13 @@ def google_choose_role():
 
         session.pop(GOOGLE_ROLE_SESSION_KEY, None)
         if assigned_role == 'organizer':
-            flash('Bạn đã đăng ký vai trò Người tổ chức. Tài khoản sẽ ở trạng thái chờ duyệt.', 'success')
-        else:
-            flash('Bạn đã đăng ký vai trò Khách hàng thành công.', 'success')
+            logout_user()
+            session.pop('user_id', None)
+            session.pop('username', None)
+            flash(ORGANIZER_PENDING_LOGIN_MESSAGE, 'success')
+            return redirect(url_for('login.login'))
+
+        flash('Bạn đã đăng ký vai trò Khách hàng thành công.', 'success')
 
         return redirect(url_for('main.index'))
 
@@ -289,6 +321,11 @@ def login():
         if error:
             flash(error, 'danger')
             return render_template('login.html'), 401
+
+        organizer_notice = _get_organizer_login_notice(user.id)
+        if organizer_notice:
+            flash(organizer_notice, 'danger')
+            return render_template('login.html'), 403
 
         login_user(user)
         session['user_id'] = user.id

@@ -34,6 +34,7 @@ function getPageContext() {
 		eventId: parseInt(root.dataset.eventId || '0', 10),
 		eventTitle: root.dataset.eventTitle || '',
 		eventDetailUrl: root.dataset.eventDetailUrl || '/',
+		checkoutUrl: root.dataset.checkoutUrl || '',
 		requireFace: root.dataset.requireFace === '1',
 	};
 }
@@ -151,7 +152,15 @@ function renderTicketHolderRows(item, requireFace) {
 
 	for (let idx = 1; idx <= item.quantity; idx += 1) {
 		const inputBase = item.ticketTypeId + '-' + idx;
-		const faceHint = requireFace ? '<small>Khuôn mặt (bắt buộc)</small>' : '<small>Khuôn mặt (không bắt buộc)</small>';
+		const faceField = requireFace
+			? (
+				'<div class="field-group field-group--full">' +
+					'<label for="face-' + inputBase + '">Khuôn mặt</label>' +
+					'<input id="face-' + inputBase + '" class="js-holder-face" type="file" accept="image/*" required>' +
+					'<small>Khuôn mặt (bắt buộc)</small>' +
+				'</div>'
+			)
+			: '';
 
 		rows.push(
 			'<div class="ticket-holder" data-holder-key="' + inputBase + '">' +
@@ -173,11 +182,7 @@ function renderTicketHolderRows(item, requireFace) {
 						'</div>' +
 						'<span class="name-helper phone-helper js-phone-helper">hợp lệ!</span>' +
 					'</div>' +
-					'<div class="field-group field-group--full">' +
-						'<label for="face-' + inputBase + '">Khuôn mặt</label>' +
-						'<input id="face-' + inputBase + '" class="js-holder-face" type="file" accept="image/*" ' + (requireFace ? 'required' : '') + '>' +
-						faceHint +
-					'</div>' +
+					faceField +
 				'</div>' +
 			'</div>'
 		);
@@ -338,20 +343,126 @@ function bindFormValidation(requireFace) {
 	});
 }
 
+function fileToDataUrl(file) {
+	return new Promise((resolve, reject) => {
+		if (!file) {
+			resolve(null);
+			return;
+		}
+
+		const reader = new FileReader();
+		reader.onload = function () {
+			resolve(typeof reader.result === 'string' ? reader.result : null);
+		};
+		reader.onerror = function () {
+			reject(new Error('Không thể đọc dữ liệu ảnh khuôn mặt.'));
+		};
+		reader.readAsDataURL(file);
+	});
+}
+
+async function collectCheckoutPayload(order, requireFace) {
+	const tickets = [];
+
+	for (const item of order.tickets) {
+		const holders = [];
+
+		for (let idx = 1; idx <= item.quantity; idx += 1) {
+			const inputBase = item.ticketTypeId + '-' + idx;
+			const nameInput = document.getElementById('name-' + inputBase);
+			const phoneInput = document.getElementById('phone-' + inputBase);
+			const faceInput = document.getElementById('face-' + inputBase);
+
+			const holder = {
+				fullName: (nameInput ? nameInput.value : '').trim(),
+				phoneNumber: (phoneInput ? phoneInput.value : '').trim(),
+				faceEmbedding: null,
+			};
+
+			if (requireFace) {
+				const faceFile = faceInput && faceInput.files && faceInput.files.length > 0
+					? faceInput.files[0]
+					: null;
+				holder.faceEmbedding = await fileToDataUrl(faceFile);
+			}
+
+			holders.push(holder);
+		}
+
+		tickets.push({
+			ticketTypeId: item.ticketTypeId,
+			quantity: item.quantity,
+			holders,
+		});
+	}
+
+	return { tickets };
+}
+
 function bindPaymentAction(order, ctx) {
 	const payButton = document.getElementById('payButton');
 	if (!payButton) return;
+	let isSubmitting = false;
 
-	payButton.addEventListener('click', function () {
+	payButton.addEventListener('click', async function () {
+		if (isSubmitting) return;
 		if (!updatePaymentState(ctx.requireFace)) return;
+		if (!ctx.checkoutUrl) {
+			alert('Không tìm thấy URL thanh toán. Vui lòng tải lại trang.');
+			return;
+		}
 
-		alert(
-			'Đã xác nhận thông tin cho ' +
-			order.totalQuantity +
-			' vé của sự kiện "' +
-			(ctx.eventTitle || order.eventTitle || 'TicketHub') +
-			'". Chức năng tích hợp thanh toán sẽ được bổ sung sau.'
-		);
+		isSubmitting = true;
+		const originalContent = payButton.innerHTML;
+		let shouldUnlock = true;
+
+		payButton.disabled = true;
+		payButton.innerHTML = 'Đang chuyển đến cổng thanh toán...';
+
+		try {
+			const payload = await collectCheckoutPayload(order, ctx.requireFace);
+			const response = await fetch(ctx.checkoutUrl, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(payload),
+			});
+
+			const result = await response.json().catch(() => ({}));
+			if (!response.ok || !result.ok) {
+				alert(result.message || 'Không thể khởi tạo đơn thanh toán.');
+
+				if (result.redirectUrl) {
+					shouldUnlock = false;
+					window.location.href = result.redirectUrl;
+				}
+
+				return;
+			}
+
+			if (!result.paymentUrl) {
+				alert('Không nhận được đường dẫn thanh toán từ máy chủ.');
+				return;
+			}
+
+			try {
+				localStorage.removeItem(PENDING_ORDER_KEY_PREFIX + ctx.eventId);
+			} catch (error) {
+				// Keep navigation flow even if localStorage cleanup fails.
+			}
+
+			shouldUnlock = false;
+			window.location.href = result.paymentUrl;
+		} catch (error) {
+			alert('Không thể kết nối hệ thống thanh toán. Vui lòng thử lại.');
+		} finally {
+			if (shouldUnlock) {
+				isSubmitting = false;
+				payButton.innerHTML = originalContent;
+				updatePaymentState(ctx.requireFace);
+			}
+		}
 	});
 }
 

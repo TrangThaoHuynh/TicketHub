@@ -1,13 +1,13 @@
 from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import datetime
-
+from flask import current_app
 from sqlalchemy import case, func, or_
 
 from .. import db
 from ..models.enums import OrganizerStatus
 from ..models.user import Organizer, User
+from .organizer_approval_email_service import send_organizer_status_email
 
 
 VALID_ORGANIZER_STATUSES = {"PENDING", "APPROVED", "REJECTED"}
@@ -159,4 +159,15 @@ def set_organizer_status(*, organizer_id: int, new_status: str) -> str | None:
     except Exception:
         db.session.rollback()
         return "Không thể cập nhật trạng thái nhà tổ chức. Vui lòng thử lại."
+    if normalized_status in {"APPROVED", "REJECTED"}:
+        organizer_user = db.session.get(User, organizer_id_int)
+        if organizer_user is not None:
+            try:
+                send_organizer_status_email(organizer_user=organizer_user, new_status=normalized_status)
+            except Exception:
+                current_app.logger.exception(
+                    "Failed to send organizer approval email (organizer_id=%s, status=%s)",
+                    organizer_id_int,
+                    normalized_status,
+                )
     return None

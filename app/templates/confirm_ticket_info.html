@@ -12,6 +12,7 @@
 	data-event-title="{{ event.title }}"
 	data-require-face="{{ 1 if event.hasFaceReg else 0 }}"
 	data-event-detail-url="{{ url_for('event.event_details', event_id=event.id) }}"
+	data-checkout-url="{{ url_for('event.checkout_event_tickets', event_id=event.id) }}"
 >
 	<div class="container confirm-layout">
 		<div class="confirm-form-panel">

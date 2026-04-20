@@ -281,9 +281,11 @@ class AdminLogoutView(BaseView):
 class OrganizerApprovalView(BaseView):
     @expose("/")
     def index(self):
+        from .services.organizer_approval_service import list_organizers_for_approval
+
         filters = {
-            "q": (request.args.get("q", "") or "").strip(),
-            "status": (request.args.get("status", "all") or "all").strip().lower(),
+            "q": request.args.get("q", ""),
+            "status": request.args.get("status", "all"),
         }
 
         rows = list_organizers_for_approval(q=filters["q"], status=filters["status"])
@@ -291,30 +293,34 @@ class OrganizerApprovalView(BaseView):
 
     @expose("/detail/<int:organizer_id>")
     def detail(self, organizer_id: int):
-        detail = get_organizer_approval_detail(organizer_id=organizer_id)
-        if detail is None:
-            abort(404)
-        return self.render("admin_organizer_approval_detail.html", organizer=detail)
+        from .services.organizer_approval_service import get_organizer_approval_detail
 
-    @expose("/approve/<int:organizer_id>", methods=["POST"])
+        organizer = get_organizer_approval_detail(organizer_id=organizer_id)
+        if organizer is None:
+            abort(404)
+        return self.render("admin_organizer_approval_detail.html", organizer=organizer)
+
+    @expose("/approve/<int:organizer_id>", methods=("POST",))
     def approve(self, organizer_id: int):
+        from .services.organizer_approval_service import set_organizer_status
+
         error = set_organizer_status(organizer_id=organizer_id, new_status="APPROVED")
         if error:
             flash(error, "error")
         else:
-            flash("Duyệt nhà tổ chức thành công.", "success")
+            flash("Đã duyệt nhà tổ chức.", "success")
+        return redirect(url_for("admin_organizer_approval.index"))
 
-        return redirect(request.referrer or url_for("admin_organizer_approval.index"))
-
-    @expose("/reject/<int:organizer_id>", methods=["POST"])
+    @expose("/reject/<int:organizer_id>", methods=("POST",))
     def reject(self, organizer_id: int):
+        from .services.organizer_approval_service import set_organizer_status
+
         error = set_organizer_status(organizer_id=organizer_id, new_status="REJECTED")
         if error:
             flash(error, "error")
         else:
-            flash("Từ chối nhà tổ chức thành công.", "success")
-
-        return redirect(request.referrer or url_for("admin_organizer_approval.index"))
+            flash("Đã từ chối nhà tổ chức.", "success")
+        return redirect(url_for("admin_organizer_approval.index"))
 
     def is_accessible(self) -> bool:
         return _is_admin()

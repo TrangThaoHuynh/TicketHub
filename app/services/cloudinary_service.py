@@ -1,11 +1,13 @@
 import cloudinary
 import cloudinary.uploader
+from io import BytesIO
 from flask import current_app
 
 
 ALLOWED_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 DEFAULT_AVATAR_FOLDER = "tickethub/avatars"
 DEFAULT_EVENT_IMAGE_FOLDER = "tickethub/events"
+DEFAULT_TICKET_QR_FOLDER = "tickethub/tickets/qr"
 
 
 class CloudinaryService:
@@ -57,6 +59,34 @@ class CloudinaryService:
             invalid_type_message="Anh su kien chi chap nhan JPG, PNG hoac WEBP.",
             upload_failed_message="Khong the tai anh su kien len Cloudinary. Vui long thu lai.",
         )
+
+    def upload_image_bytes(self, image_bytes, folder=DEFAULT_TICKET_QR_FOLDER, filename="ticket-qr.png"):
+        if not image_bytes:
+            return None, "Khong co du lieu anh de tai len Cloudinary."
+
+        if not self.is_configured():
+            return None, (
+                "Cloudinary chua duoc cau hinh. Hay them vao .env mot trong hai cach: "
+                "(1) CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET "
+                "hoac (2) CLOUDINARY_URL."
+            )
+
+        try:
+            file_obj = BytesIO(image_bytes)
+            file_obj.name = filename
+            response = cloudinary.uploader.upload(
+                file_obj,
+                folder=folder,
+                resource_type="image",
+            )
+        except Exception:
+            current_app.logger.exception("Cloudinary bytes image upload failed")
+            return None, "Khong the tai anh QR len Cloudinary. Vui long thu lai."
+
+        return {
+            "url": response.get("secure_url"),
+            "public_id": response.get("public_id"),
+        }, None
 
 
 cloudinary_service = CloudinaryService()
