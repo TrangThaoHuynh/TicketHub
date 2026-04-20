@@ -44,7 +44,9 @@ def _seed_lookup_tables():
         OrganizerStatus: ["PENDING", "APPROVED", "REJECTED"],
         PaymentStatus: ["SUCCESS", "FAILED"],
         TicketStatus: ["PENDING", "VALID", "USED", "CANCELLED"],
+
         EventStatus: ["PENDING", "PUBLISHED", "FINISHED", "CANCELLED"],
+
     }
 
     changed = False
@@ -82,7 +84,7 @@ def create_app():
     @login_manager.user_loader
     def load_user(user_id: str):
         from .models.user import User
-        return User.query.get(int(user_id))
+        return db.session.get(User, int(user_id))
     
     from . import models
     from .routes.event_routes import event_bp

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, abort, send_file, request, url_for, redirect
+from flask import Blueprint, render_template, abort, send_file, request, jsonify, url_for, redirect
 from ..models.booking import Booking
 from ..services.ticket_email_service import send_ticket_email_by_booking
 from flask_login import login_required, current_user

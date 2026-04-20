@@ -23,20 +23,33 @@ document.addEventListener("DOMContentLoaded", () => {
 	const flashContainer = document.querySelector(".flash-messages");
 	const flashAlerts = flashContainer?.querySelectorAll(".alert") || [];
 
-	if (flashAlerts.length > 0) {
+	const dismissAlert = (alert, delayMs = 250) => {
+		if (!alert || alert.dataset.dismissing === "true") {
+			return;
+		}
+
+		alert.dataset.dismissing = "true";
+		alert.classList.add("hide");
+
 		window.setTimeout(() => {
-			flashAlerts.forEach((alert) => {
-				alert.style.transition = "opacity 0.25s ease";
-				alert.style.opacity = "0";
-				window.setTimeout(() => alert.remove(), 260);
-			});
+			alert.remove();
+			if (flashContainer && !flashContainer.querySelector(".alert")) {
+				flashContainer.remove();
+			}
+		}, delayMs);
+	};
+
+	if (flashAlerts.length > 0) {
+		flashAlerts.forEach((alert, index) => {
+			const closeButton = alert.querySelector(".alert-close");
+			if (closeButton) {
+				closeButton.addEventListener("click", () => dismissAlert(alert));
+			}
 
 			window.setTimeout(() => {
-				if (flashContainer && !flashContainer.querySelector(".alert")) {
-					flashContainer.remove();
-				}
-			}, 300);
-		}, FLASH_AUTO_HIDE_MS);
+				dismissAlert(alert);
+			}, FLASH_AUTO_HIDE_MS + index * 240);
+		});
 	}
 
 	inputs.forEach((input) => {
