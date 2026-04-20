@@ -1,13 +1,15 @@
 {% extends 'base.html' %}
 
-{% block content %}
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('login.static', filename='css/organizer_orders.css') }}">
+{% endblock %}
 
-<link rel="stylesheet" href="{{ url_for('static', filename='css/organizer_orders.css') }}">
+{% block content %}
 <div class="orders-page">
     <div class="container">
         <div class="orders-card" aria-label="Quản lý đơn mua">
             <div class="orders-card__header">
-                <div>
+                <div class="orders-card__header-left">
                     <h1 class="orders-title">Quản lý đơn mua</h1>
                     <p class="orders-subtitle">
                         Sự kiện:
@@ -16,6 +18,13 @@
                         </strong>
                     </p>
                 </div>
+
+                {% if event is defined and event and event.id is defined %}
+                <a class="orders-back" href="{{ url_for('event.organizer_event_detail', event_id=event.id) }}">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Trở lại sự kiện</span>
+                </a>
+                {% endif %}
             </div>
 
             <div class="orders-toolbar" role="region" aria-label="Bộ lọc đơn mua">
@@ -113,6 +122,8 @@
         </div>
     </div>
 </div>
-<script src="{{ url_for('static', filename='js/organizer_orders.js') }}"></script>
+{% endblock %}
 
+{% block scripts %}
+<script src="{{ url_for('login.static', filename='js/organizer_orders.js') }}"></script>
 {% endblock %}

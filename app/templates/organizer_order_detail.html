@@ -1,15 +1,13 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/organizer_order_detail.css') }}">
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('login.static', filename='css/organizer_order_detail.css') }}">
+{% endblock %}
 
+{% block content %}
 <div class="order-detail-page">
     <div class="container">
         <div class="order-detail-card" aria-label="Chi tiết đơn mua">
-            <div class="order-detail-card__topbar">
-                <h1 class="order-detail-title">Chi tiết đơn mua</h1>
-            </div>
-
             {% set _order = order if order is defined and order else None %}
             {% set _event = event if event is defined and event else None %}
             {% set _tickets = tickets if tickets is defined and tickets else None %}
@@ -23,6 +21,17 @@
             {% set event_title = (_event.title if _event and _event.title is defined else '—') %}
             {% set event_time = (_event.time_text if _event and _event.time_text is defined else '—') %}
             {% set event_location = (_event.location if _event and _event.location is defined else '—') %}
+
+            <div class="order-detail-card__topbar">
+                <h1 class="order-detail-title">Chi tiết đơn mua</h1>
+
+                {% if _event and _event.id is defined %}
+                <a class="order-detail-back" href="{{ url_for('organizer.organizer_event_orders', event_id=_event.id) }}">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Trở lại quản lý đơn</span>
+                </a>
+                {% endif %}
+            </div>
 
             <div class="order-detail-body">
                 <section class="info-section" aria-label="Thông tin đơn">
