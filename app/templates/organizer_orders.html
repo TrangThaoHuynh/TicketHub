@@ -1,129 +1,165 @@
-{% extends 'base.html' %}
-
-{% block styles %}
-<link rel="stylesheet" href="{{ url_for('login.static', filename='css/organizer_orders.css') }}">
-{% endblock %}
-
-{% block content %}
+{% extends 'base.html' %} {% block styles %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('login.static', filename='css/organizer_orders.css') }}"
+/>
+{% endblock %} {% block content %}
 <div class="orders-page">
-    <div class="container">
-        <div class="orders-card" aria-label="Quản lý đơn mua">
-            <div class="orders-card__header">
-                <div class="orders-card__header-left">
-                    <h1 class="orders-title">Quản lý đơn mua</h1>
-                    <p class="orders-subtitle">
-                        Sự kiện:
-                        <strong>
-                            {{ event.title if event is defined and event else 'Tên sự kiện' }}
-                        </strong>
-                    </p>
-                </div>
-
-                {% if event is defined and event and event.id is defined %}
-                <a class="orders-back" href="{{ url_for('event.organizer_event_detail', event_id=event.id) }}">
-                    <i class="fa-solid fa-arrow-left"></i>
-                    <span>Trở lại sự kiện</span>
-                </a>
-                {% endif %}
-            </div>
-
-            <div class="orders-toolbar" role="region" aria-label="Bộ lọc đơn mua">
-                <div class="orders-toolbar__row">
-                    <div class="orders-toolbar__field">
-                        <label for="orderCode">Mã đơn:</label>
-                        <input id="orderCode" class="orders-input" type="text" placeholder="Nhập mã đơn..."
-                            autocomplete="off" />
-                    </div>
-
-                    <div class="orders-toolbar__field">
-                        <label for="orderStatus" class="visually-hidden">Trạng thái</label>
-                        <select id="orderStatus" class="orders-select" aria-label="Trạng thái">
-                            <option value="">Trạng thái</option>
-                            <option value="paid">Đã thanh toán</option>
-                            <option value="unpaid">Chưa thanh toán</option>
-                        </select>
-                    </div>
-
-                    <div class="orders-toolbar__actions">
-                        <button type="button" class="orders-btn" id="btnFilter">Lọc</button>
-                        <button type="button" class="orders-btn" id="btnClear">Bỏ lọc</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="orders-table-wrap">
-                <table class="orders-table" aria-label="Danh sách đơn mua" id="ordersTable">
-                    <thead>
-                        <tr>
-                            <th>Mã đơn</th>
-                            <th>Khách hàng</th>
-                            <th>Số điện thoại</th>
-                            <th>Email</th>
-                            <th>Số vé</th>
-                            <th>Tổng tiền</th>
-                            <th>Trạng thái</th>
-                            <th>Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ordersTbody">
-                        {% if orders is defined and orders %}
-                        {% for o in orders %}
-                        {% set status_value = (o.status or '')|lower %}
-                        <tr class="js-order-row" data-order-code="{{ o.code or o.id }}"
-                            data-status="{{ 'paid' if status_value in ['paid', 'success', 'completed', 'done'] else 'unpaid' }}">
-                            <td>{{ o.code or o.id }}</td>
-                            <td>{{ o.customer_name or '—' }}</td>
-                            <td>{{ o.customer_phone or '—' }}</td>
-                            <td>{{ o.customer_email or '—' }}</td>
-                            <td>{{ o.ticket_count or 0 }}</td>
-                            <td>
-                                {% if o.total_amount is not none %}
-                                {{ "{:,.0f}".format(o.total_amount).replace(',', '.') }} đ
-                                {% else %}
-                                —
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if status_value in ['paid', 'success', 'completed', 'done'] %}
-                                <span class="orders-status orders-status--paid">Đã thanh toán</span>
-                                {% else %}
-                                <span class="orders-status orders-status--unpaid">Chưa thanh toán</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <a class="orders-action"
-                                    href="{{ url_for('organizer.organizer_event_order_detail', event_id=event.id, order_id=o.id) }}"
-                                    data-order-id="{{ o.id }}">Xem chi tiết</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                        {% else %}
-                        <tr>
-                            <td colspan="8" class="text-center text-muted" style="padding: 16px;">
-                                Chưa có đơn mua.
-                            </td>
-                        </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="orders-footer">
-                <div class="orders-pagination" aria-label="Phân trang">
-                    <button class="orders-page-btn" id="pagePrev" type="button" aria-label="Trang trước">
-                        <i class="fa-solid fa-chevron-left"></i>
-                    </button>
-                    <div id="pageButtons" style="display: inline-flex; gap: 6px;"></div>
-                    <button class="orders-page-btn" id="pageNext" type="button" aria-label="Trang sau">
-                        <i class="fa-solid fa-chevron-right"></i>
-                    </button>
-                </div>
-            </div>
+  <div class="container">
+    <div class="orders-card" aria-label="Quản lý đơn mua">
+      <div class="orders-card__header">
+        <div class="orders-card__header-left">
+          <h1 class="orders-title">Quản lý đơn mua</h1>
+          <p class="orders-subtitle">
+            Sự kiện:
+            <strong>
+              {{ event.title if event is defined and event else 'Tên sự kiện' }}
+            </strong>
+          </p>
         </div>
-    </div>
-</div>
-{% endblock %}
 
-{% block scripts %}
+        {% if event is defined and event and event.id is defined %}
+        <a
+          class="orders-back"
+          href="{{ url_for('event.organizer_event_detail', event_id=event.id) }}"
+        >
+          <i class="fa-solid fa-arrow-left"></i>
+          <span>Trở lại sự kiện</span>
+        </a>
+        {% endif %}
+      </div>
+
+      <div class="orders-toolbar" role="region" aria-label="Bộ lọc đơn mua">
+        <div class="orders-toolbar__row">
+          <div class="orders-toolbar__field">
+            <label for="orderCode">Mã đơn:</label>
+            <input
+              id="orderCode"
+              class="orders-input"
+              type="text"
+              placeholder="Nhập mã đơn..."
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="orders-toolbar__field">
+            <label for="orderStatus" class="visually-hidden">Trạng thái</label>
+            <select
+              id="orderStatus"
+              class="orders-select"
+              aria-label="Trạng thái"
+            >
+              <option value="">Trạng thái</option>
+              <option value="paid">Đã thanh toán</option>
+              <option value="unpaid">Chưa thanh toán</option>
+            </select>
+          </div>
+
+          <div class="orders-toolbar__actions ">
+            <button type="button" class="orders-btn" id="btnFilter">Lọc</button>
+            <button type="button" class="orders-btn" id="btnClear">
+              Bỏ lọc
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="orders-table-wrap">
+        <table
+          class="orders-table"
+          aria-label="Danh sách đơn mua"
+          id="ordersTable"
+        >
+          <thead>
+            <tr>
+              <th>Mã đơn</th>
+              <th>Khách hàng</th>
+              <th>Số điện thoại</th>
+              <th>Email</th>
+              <th>Số vé</th>
+              <th>Tổng tiền</th>
+              <th>Trạng thái</th>
+              <th>Hành động</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTbody">
+            {% if orders is defined and orders %} {% for o in orders %} {% set
+            status_value = (o.status or '')|lower %}
+            <tr
+              class="js-order-row"
+              data-order-code="{{ o.code or o.id }}"
+              data-status="{{ 'paid' if status_value in ['paid', 'success', 'completed', 'done'] else 'unpaid' }}"
+            >
+              <td>{{ o.code or o.id }}</td>
+              <td>{{ o.customer_name or '—' }}</td>
+              <td>{{ o.customer_phone or '—' }}</td>
+              <td>{{ o.customer_email or '—' }}</td>
+              <td>{{ o.ticket_count or 0 }}</td>
+              <td>
+                {% if o.total_amount is not none %} {{
+                "{:,.0f}".format(o.total_amount).replace(',', '.') }} đ {% else
+                %} — {% endif %}
+              </td>
+              <td>
+                {% if status_value in ['paid', 'success', 'completed', 'done']
+                %}
+                <span class="orders-status orders-status--paid"
+                  >Đã thanh toán</span
+                >
+                {% else %}
+                <span class="orders-status orders-status--unpaid"
+                  >Chưa thanh toán</span
+                >
+                {% endif %}
+              </td>
+              <td>
+                <a
+                  class="orders-action"
+                  href="{{ url_for('organizer.organizer_event_order_detail', event_id=event.id, order_id=o.id) }}"
+                  data-order-id="{{ o.id }}"
+                  >Xem chi tiết</a
+                >
+              </td>
+            </tr>
+            {% endfor %} {% else %}
+            <tr>
+              <td
+                colspan="8"
+                class="text-center text-muted"
+                style="padding: 16px"
+              >
+                Chưa có đơn mua.
+              </td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="orders-footer">
+        <div class="orders-pagination" aria-label="Phân trang">
+          <button
+            class="orders-page-btn"
+            id="pagePrev"
+            type="button"
+            aria-label="Trang trước"
+          >
+            <i class="fa-solid fa-chevron-left"></i>
+          </button>
+          <div id="pageButtons" style="display: inline-flex; gap: 6px"></div>
+          <button
+            class="orders-page-btn"
+            id="pageNext"
+            type="button"
+            aria-label="Trang sau"
+          >
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
 <script src="{{ url_for('login.static', filename='js/organizer_orders.js') }}"></script>
 {% endblock %}

@@ -56,16 +56,20 @@ def send_ticket_email_by_booking(booking_id: int):
         if not ticket_type or not event:
             continue
 
-        qr_png = build_ticket_qr_png(ticket)
-        cid = f"ticket_qr_{idx}"
+        has_face_reg = bool(event.hasFaceReg)
+        cid = None
 
-        msg.attach(
-        filename=f"{ticket.ticketCode or ticket.id}.png",
-        content_type="image/png",
-        data=qr_png,
-        disposition="inline",
-        headers={"Content-ID": f"<{cid}>"}
-)
+        if not has_face_reg:
+            qr_png = build_ticket_qr_png(ticket)
+            cid = f"ticket_qr_{idx}"
+
+            msg.attach(
+                filename=f"{ticket.ticketCode or ticket.id}.png",
+                content_type="image/png",
+                data=qr_png,
+                disposition="inline",
+                headers={"Content-ID": f"<{cid}>"}
+            )
 
         ticket_items.append({
             "ticket_code": ticket.ticketCode or ticket.id,
@@ -77,7 +81,7 @@ def send_ticket_email_by_booking(booking_id: int):
             "event_location": event.location,
             "event_start": event.startTime.strftime("%H:%M %d/%m/%Y") if event.startTime else "",
             "event_end": event.endTime.strftime("%H:%M %d/%m/%Y") if event.endTime else "",
-            "has_face_reg": bool(event.hasFaceReg),
+            "has_face_reg": has_face_reg,
             "qr_cid": cid,
         })
 

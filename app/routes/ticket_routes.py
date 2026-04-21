@@ -322,10 +322,11 @@ def checkout_event_tickets(event_id: int):
 	if (event.status or "").strip().upper() != "PUBLISHED":
 		return jsonify({"ok": False, "message": "Sự kiện hiện không mở bán vé."}), 400
 
+	require_face = bool(event.hasFaceReg)
 	payload = request.get_json(silent=True) or {}
 	checkout_tickets, parse_error = _parse_checkout_tickets(
 		payload.get("tickets"),
-		require_face=bool(event.hasFaceReg),
+		require_face=require_face,
 	)
 	if parse_error:
 		return jsonify({"ok": False, "message": parse_error}), 400
@@ -406,7 +407,7 @@ def checkout_event_tickets(event_id: int):
 			for holder in selected_ticket["holders"]:
 				face_embedding = None
 
-				if event.hasFaceReg:
+				if require_face:
 					try:
 						face_embedding = extract_face_embedding_from_base64(holder.get("faceImageBase64"))
 					except ValueError as exc:
@@ -433,7 +434,7 @@ def checkout_event_tickets(event_id: int):
 					customerId=user_id,
 				)
 
-				if event.hasFaceReg is False:
+				if not require_face:
 					qr_url, qr_error = _create_and_upload_qr_url(ticket=ticket, event_id=event.id)
 					if qr_error:
 						raise RuntimeError(qr_error)
