@@ -5,6 +5,7 @@ from .ticket import Ticket
 from .ticket_type import TicketType
 from .booking import Booking
 from .payment import Payment
+from .search_history import SearchHistory
 
 from .enums import (
     BookingStatus,

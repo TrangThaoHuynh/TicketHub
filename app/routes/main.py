@@ -4,9 +4,12 @@ from flask_login import login_required, current_user
 from .. import db
 from ..models.user import Organizer
 from ..models.user import User
+from ..models.user import Customer
+from ..services.search_history_service import save_search_history
 from ..services.cloudinary_service import cloudinary_service
 from ..services.event_service import get_event_types, get_home_events
 from ..services.user_service import update_user_profile, change_password
+from ..services.recommendation_service import get_recommended_events
 
 main = Blueprint(
     'main',
@@ -101,6 +104,13 @@ def index():
     location = request.args.get("location")
     price_min = request.args.get("priceMin")
     price_max = request.args.get("priceMax")
+
+    #Lưu lịch sử và nội dung tìm kiếm
+    if keyword and current_user.is_authenticated:
+        customer = db.session.get(Customer, current_user.id)
+        if customer:
+            save_search_history(current_user.id, keyword)
+
     event_types = get_event_types()
     events = get_home_events(
         keyword=keyword,
@@ -112,11 +122,24 @@ def index():
         price_max=price_max,
         organizer_id=user_id if is_organizer else None,
     )
+
+    # Lấy sự kiện gợi ý chỉ khi chưa tìm kiếm/lọc
+    recommended_events = []
+    show_header_discovery = False
+    
+    if current_user.is_authenticated and not keyword and not event_type_id:
+        recommended_events = get_recommended_events(current_user.id, limit=4)
+        show_header_discovery = True
+
+    print(f"User authenticated: {current_user.is_authenticated}")
+    print(f"Recommended events count: {len(recommended_events)}")
     return render_template(
         "main.html",
         event_types=event_types,
         events=events,
+        recommended_events=recommended_events,
+        show_header_discovery=show_header_discovery,
         show_search=True,
         is_organizer=is_organizer,
-        header_show_manage_orders=False,
+        header_show_manage_orders=False,    
     )

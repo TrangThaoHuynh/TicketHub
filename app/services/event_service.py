@@ -75,7 +75,13 @@ def get_home_events(
     query = (
         db.session.query(Event, min_price_subq.c.min_price)
         .outerjoin(min_price_subq, min_price_subq.c.event_id == Event.id)
-        .order_by(Event.startTime.is_(None).asc(), Event.startTime.asc(), Event.id.desc())
+        .order_by(
+                # Prioritize upcoming events (startTime >= now) first
+                (Event.startTime >= datetime.now()).desc(), # desc để set true (sự kiện sắp tới) lên trước
+                # Upcoming events sorted by startTime ascending (soonest first)
+                Event.startTime.asc(),
+                # Then past events (as fallback)
+                Event.id.desc())
     )
 
     if keyword:

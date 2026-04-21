@@ -5,6 +5,8 @@ from ..services.ticket_service import (
     confirm_ticket_checkin_for_organizer,
     inspect_ticket_code_for_organizer,
     inspect_qr_for_organizer,
+    inspect_face_for_organizer,
+    confirm_face_checkin_for_organizer,
 )
 from ..services.organizer_order_service import (
     get_order_detail_for_organizer,
@@ -136,8 +138,10 @@ def organizer_event_scan(event_id: int):
     if event is None:
         abort(404)
 
+    template_name = 'organizer_face_scan.html' if event.hasFaceReg else 'organizer_qr_scan.html'
+
     return render_template(
-        'organizer_qr_scan.html',
+        template_name,
         event=event,
         show_search=False,
     )
@@ -213,6 +217,89 @@ def organizer_confirm_checkin():
         })
 
     result = confirm_ticket_checkin_for_organizer(
+        organizer_id=organizer_id,
+        event_id=event_id,
+        ticket_id=ticket_id,
+    )
+    return jsonify(result)
+
+@organizer_bp.route('/api/face/identify', methods=['POST'])
+def organizer_identify_face():
+    """
+    Xác định khuôn mặt từ ảnh để kiểm tra xem vé đó tồn tại hay không.
+    """
+    # Lấy user_id từ session
+    user_id = session.get('user_id')
+    if not user_id:
+        # Trả về lỗi nếu người dùng chưa đăng nhập
+        return jsonify({
+            "ok": False,
+            "error": "unauthorized",
+            "message": "Bạn chưa đăng nhập.",
+        }), 401
+
+    organizer_id = int(user_id)
+    # Lấy payload từ JSON request hoặc form data
+    payload = request.get_json(silent=True) or request.form
+
+    # Lấy event_id và ảnh khuôn mặt base64 từ payload
+    raw_event_id = payload.get("event_id")
+    face_image_base64 = payload.get("face_image_base64", "")
+
+    # Xác thực event_id là số nguyên
+    try:
+        event_id = int(raw_event_id)
+    except (TypeError, ValueError):
+        return jsonify({
+            "ok": False,
+            "error": "invalid_event_id",
+            "message": "event_id không hợp lệ.",
+        }), 400
+
+    # Gọi service để xác định khuôn mặt
+    result = inspect_face_for_organizer(
+        organizer_id=organizer_id,
+        event_id=event_id,
+        face_image_base64=face_image_base64,
+    )
+    return jsonify(result)
+
+
+@organizer_bp.route('/api/face/check-in', methods=['POST'])
+def organizer_confirm_face_checkin():
+    """
+    Xác nhận check-in cho vé dựa trên khuôn mặt đã xác định.
+    """
+    # Lấy user_id từ session
+    user_id = session.get('user_id')
+    if not user_id:
+        # Trả về lỗi nếu người dùng chưa đăng nhập
+        return jsonify({
+            "ok": False,
+            "error": "unauthorized",
+            "message": "Bạn chưa đăng nhập.",
+        }), 401
+
+    organizer_id = int(user_id)
+    # Lấy payload từ JSON request hoặc form data
+    payload = request.get_json(silent=True) or request.form
+
+    # Lấy event_id và ticket_id từ payload
+    raw_event_id = payload.get("event_id")
+    ticket_id = payload.get("ticket_id", "")
+
+    # Xác thực event_id là số nguyên
+    try:
+        event_id = int(raw_event_id)
+    except (TypeError, ValueError):
+        return jsonify({
+            "ok": False,
+            "error": "invalid_event_id",
+            "message": "event_id không hợp lệ.",
+        }), 400
+
+    # Gọi service để xác nhận check-in cho vé
+    result = confirm_face_checkin_for_organizer(
         organizer_id=organizer_id,
         event_id=event_id,
         ticket_id=ticket_id,
