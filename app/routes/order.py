@@ -53,6 +53,11 @@ def ticket_qr_image(ticket_id):
     if t.customerId != current_user.id:
         abort(403)
 
+    ticket_type = TicketType.query.get(t.ticketTypeId) if t.ticketTypeId else None
+    event = Event.query.get(ticket_type.eventId) if ticket_type else None
+    if event and bool(event.hasFaceReg):
+        abort(404)
+
     if (t.qrCode or '').startswith('http'):
         return redirect(t.qrCode)
 
@@ -190,7 +195,10 @@ def booking_detail(booking_id: int):
 
         for t, tt, _event in ticket_rows:
             code = t.ticketCode or t.id
-            qr_url = t.qrCode if (t.qrCode or '').startswith('http') else url_for('orders.ticket_qr_image', ticket_id=t.id)
+            has_face_reg = bool(getattr(_event, 'hasFaceReg', False))
+            qr_url = None
+            if not has_face_reg:
+                qr_url = t.qrCode if (t.qrCode or '').startswith('http') else url_for('orders.ticket_qr_image', ticket_id=t.id)
             ticket_status = str(t.status or '').upper()
 
             if ticket_status == 'VALID':
@@ -210,6 +218,7 @@ def booking_detail(booking_id: int):
                     'holder_name': t.fullName,
                     'ticket_code': code,
                     'qr_url': qr_url,
+                    'has_face_reg': has_face_reg,
                     'status': ticket_status,
                 }
             )

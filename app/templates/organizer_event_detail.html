@@ -8,10 +8,11 @@
   href="{{ url_for('main.static', filename='css/organizer_event_detail.css') }}"
 />
 {% endblock %} {% block content %} {% set status_raw =
-(event.status|string|upper) if event and event.status else 'PENDING' %} {% set
+(event.status|string|trim|upper) if event and event.status else 'PENDING' %} {% set
 status_label = status_raw %} {% set is_cancelled_event = status_label ==
 'CANCELLED' %} {% set is_finished_event = status_label == 'FINISHED' %} {% set
-is_pending_event = status_label == 'PENDING' %} {% set delete_action_label =
+is_pending_event = status_label == 'PENDING' %} {% set is_published_event =
+status_label == 'PUBLISHED' %} {% set delete_action_label =
 'xóa' if status_raw == 'PENDING' else 'ẩn' %} {% set delete_action_title = 'Xác
 nhận xóa sự kiện' if status_raw == 'PENDING' else 'Xác nhận ẩn sự kiện' %} {%
 set organizer_name = current_user.name if current_user and current_user.name
@@ -53,6 +54,7 @@ current_user.email if current_user and current_user.email else 'Updating...' %}
 
       <div class="org-detail-actions">
         {% if not is_cancelled_event %} {% if not is_finished_event %}
+        {% if not is_published_event %}
         <button
           type="button"
           class="org-detail-btn org-detail-btn--ghost"
@@ -61,6 +63,7 @@ current_user.email if current_user and current_user.email else 'Updating...' %}
           <i class="fa-solid fa-sliders me-1"></i>
           Điều chỉnh vé
         </button>
+        {% endif %}
 
         <a
           href="{{ url_for('organizer.organizer_event_scan', event_id=event.id) }}"
@@ -457,9 +460,21 @@ current_user.email if current_user and current_user.email else 'Updating...' %}
     </div>
   </div>
 </div>
-{% endblock %} {% block scripts %}
-<script id="ticketAdjustInitialData" type="application/json">
-  {{ ticket_types_payload|default([], true)|tojson }}
-</script>
+
+{% endblock %}
+
+{% block scripts %}
+<script id="ticketAdjustInitialData"
+	type="application/json">{{ ticket_types_payload|default([], true)|tojson }}</script>
+{% set organizer_event_detail_context = {
+'eventId': event.id if event else none,
+'eventTypeId': event.eventTypeId if event else none,
+'location': event.location if event and event.location else '',
+'startTime': event.startTime.strftime('%Y-%m-%dT%H:%M') if event and event.startTime else '',
+'endTime': event.endTime.strftime('%Y-%m-%dT%H:%M') if event and event.endTime else '',
+'hasFaceReg': (true if event and event.hasFaceReg is not false else false),
+'limitQuantity': (event.limitQuantity if event and event.limitQuantity else none),
+} %}
+<script id="organizerEventDetailContext" type="application/json">{{ organizer_event_detail_context|tojson }}</script>
 <script src="{{ url_for('main.static', filename='js/organizer_event_detail.js') }}"></script>
 {% endblock %}

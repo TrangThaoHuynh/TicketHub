@@ -88,6 +88,10 @@ body {
 	background: #ececec;
 }
 
+.footer-section .back-to-top {
+	display: none !important;
+}
+
 .org-flash-wrap {
 	margin-bottom: 12px;
 }
