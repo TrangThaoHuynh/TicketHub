@@ -15,10 +15,119 @@ from ..services import create_event, create_ticket_type, get_ticket_type_by_even
 from ..services.cloudinary_service import cloudinary_service
 from ..services.event_service import get_event_by_id, get_event_types
 from ..services.ticket_service import get_ticket_types_by_event_id, count_sold_by_ticket_type
+from ..services.ticket_price_suggestion_service import TicketPriceSuggester
 
 event_bp = Blueprint('event', __name__)
 
+_ticket_price_suggester = TicketPriceSuggester()
+
 ALLOWED_EVENT_STATUSES = {"PENDING", "PUBLISHED"}
+
+
+@event_bp.route('/api/organizer/ticket-types/suggest-price', methods=['POST'])
+def suggest_ticket_type_price():
+    user_id = session.get('user_id')
+    organizer = db.session.get(Organizer, user_id) if user_id else None
+    if organizer is None:
+        return jsonify({"error": "unauthorized"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    event_payload = payload.get("event") if isinstance(payload, dict) else None
+    event_payload = event_payload if isinstance(event_payload, dict) else {}
+    tickets_payload = payload.get("tickets") if isinstance(payload, dict) else None
+
+    event_id = _parse_positive_int(event_payload.get("eventId") or payload.get("eventId"))
+    if event_id is not None:
+        event = get_event_by_id(event_id)
+        if event is None:
+            return jsonify({"error": "not_found", "message": "Sự kiện không tồn tại."}), 404
+
+        if event.organizerId != organizer.id:
+            return jsonify({"error": "forbidden", "message": "Bạn không có quyền thực hiện thao tác này."}), 403
+
+        normalized_event_status = (event.status or "").strip().upper()
+        if normalized_event_status != "PENDING":
+            return (
+                jsonify(
+                    {
+                        "error": "event_not_pending",
+                        "message": "Chỉ có thể gợi ý giá vé khi sự kiện đang xử lý (PENDING).",
+                    }
+                ),
+                400,
+            )
+
+    if tickets_payload is None:
+        # allow single-ticket payload for convenience
+        tickets_payload = [payload] if isinstance(payload, dict) else []
+
+    if not isinstance(tickets_payload, list) or not tickets_payload:
+        return jsonify({"error": "invalid_payload", "message": "Missing tickets"}), 400
+
+    event_type_id = _parse_positive_int(event_payload.get("eventTypeId") or payload.get("eventTypeId"))
+    if event_type_id is None:
+        return jsonify({"error": "invalid_payload", "message": "Missing eventTypeId"}), 400
+
+    event_type = db.session.get(EventType, event_type_id)
+    event_type_name = (event_payload.get("eventTypeName") or getattr(event_type, "name", "") or "").strip()
+
+    location = (event_payload.get("location") or payload.get("location") or "").strip()
+    start_time = _parse_datetime_local(event_payload.get("startTime") or payload.get("startTime"))
+    end_time = _parse_datetime_local(event_payload.get("endTime") or payload.get("endTime"))
+
+    has_face_reg = bool(event_payload.get("hasFaceReg") if "hasFaceReg" in event_payload else payload.get("hasFaceReg"))
+    limit_quantity = event_payload.get("limitQuantity") if "limitQuantity" in event_payload else payload.get("limitQuantity")
+    if limit_quantity in ("", None):
+        limit_quantity = None
+    else:
+        limit_quantity = _parse_positive_int(limit_quantity)
+
+    suggester = _ticket_price_suggester
+    suggestions = []
+
+    for ticket in tickets_payload:
+        if not isinstance(ticket, dict):
+            continue
+
+        ticket_type_name = (ticket.get("ticketTypeName") or ticket.get("name") or "").strip()
+        ticket_quantity = _parse_positive_int(ticket.get("ticketQuantity") or ticket.get("quantity"))
+        if ticket_quantity is None:
+            ticket_quantity = 1
+
+        sale_start = _parse_datetime_local(ticket.get("saleStart"))
+        sale_end = _parse_datetime_local(ticket.get("saleEnd"))
+
+        result = suggester.suggest_price(
+            organizer_id=organizer.id,
+            event_type_id=event_type_id,
+            event_type_name=event_type_name,
+            location=location,
+            has_face_reg=has_face_reg,
+            limit_quantity=limit_quantity,
+            start_time=start_time,
+            end_time=end_time,
+            sale_start=sale_start,
+            sale_end=sale_end,
+            ticket_type_name=ticket_type_name,
+            ticket_quantity=ticket_quantity,
+        )
+
+        suggestions.append(
+            {
+                "ticketTypeName": ticket_type_name,
+                "ticketQuantity": ticket_quantity,
+                "suggestedPrice": result.suggested_price,
+                "source": result.source,
+            }
+        )
+
+    return jsonify(
+        {
+            "eventTypeId": event_type_id,
+            "eventTypeName": event_type_name,
+            "suggestions": suggestions,
+        }
+    )
 
 
 def _parse_datetime_local(value):
@@ -213,6 +322,7 @@ def _build_edit_event_initial_data(event, ticket_types, selected_status=None):
         )
 
     return {
+        "eventId": event.id,
         "title": event.title or "",
         "location": event.location or "",
         "eventTypeId": event.eventTypeId,
@@ -373,9 +483,9 @@ def organizer_edit_event(event_id: int):
         flash("Bạn không có quyền chỉnh sửa sự kiện này.", "danger")
         return redirect(url_for('main.index'))
 
-    normalized_event_status = (event.status or "").strip().upper()
-    if normalized_event_status != "PENDING":
-        flash("Chỉ có thể chỉnh sửa sự kiện đang xử lý.", "danger")
+    normalized_event_status = (event.status or "").strip().upper() or "PENDING"
+    if normalized_event_status not in {"PENDING", "PUBLISHED"}:
+        flash("Sự kiện ở trạng thái này không thể chỉnh sửa.", "danger")
         return redirect(url_for('event.organizer_event_detail', event_id=event_id))
 
     event_types = get_event_types()
@@ -388,6 +498,10 @@ def organizer_edit_event(event_id: int):
     location = (request.form.get("location") or "").strip()
     description = _sanitize_rich_html(request.form.get("description"))
     selected_status = _normalize_event_status(request.form.get("eventStatus"))
+
+    if normalized_event_status == "PUBLISHED" and selected_status != "PUBLISHED":
+        flash("Sự kiện đã công khai không thể chuyển về trạng thái PENDING.", "danger")
+        return _render_edit_event_page(event, event_types, ticket_types, selected_status), 400
 
     if not title:
         flash("Vui lòng nhập tên sự kiện.", "danger")
@@ -454,15 +568,51 @@ def organizer_edit_event(event_id: int):
         incoming_existing_ids.add(ticket_id)
 
     removed_ticket_ids = [ticket_id for ticket_id in existing_ticket_by_id if ticket_id not in incoming_existing_ids]
-    if removed_ticket_ids:
-        has_issued_tickets = (
-            db.session.query(Ticket.id)
-            .filter(Ticket.ticketTypeId.in_(removed_ticket_ids))
-            .first()
-        )
-        if has_issued_tickets:
-            flash("Không thể xóa loại vé đã phát sinh giao dịch.", "danger")
+
+    allow_ticket_changes = normalized_event_status == "PENDING"
+    if not allow_ticket_changes:
+        if removed_ticket_ids:
+            flash("Sự kiện đã công khai nên không thể điều chỉnh loại vé.", "danger")
             return _render_edit_event_page(event, event_types, ticket_types, selected_status), 400
+
+        for index, ticket in enumerate(ticket_payload, start=1):
+            ticket_id = ticket.get("id")
+            if ticket_id is None:
+                flash("Sự kiện đã công khai nên không thể tạo thêm loại vé.", "danger")
+                return _render_edit_event_page(event, event_types, ticket_types, selected_status), 400
+
+            existing_ticket = existing_ticket_by_id.get(ticket_id)
+            if existing_ticket is None:
+                flash(f"Loại vé thứ {index} không tồn tại hoặc không thuộc sự kiện này.", "danger")
+                return _render_edit_event_page(event, event_types, ticket_types, selected_status), 400
+
+            existing_price = Decimal(existing_ticket.price or 0)
+            existing_quantity = int(existing_ticket.quantity or 0)
+            existing_sale_start = existing_ticket.saleStart
+            existing_sale_end = existing_ticket.saleEnd
+            existing_name = (existing_ticket.name or "").strip()
+            existing_description = (existing_ticket.description or "").strip()
+
+            if (
+                existing_name != ticket["name"]
+                or existing_description != ticket["description"]
+                or existing_price != ticket["price"]
+                or existing_quantity != ticket["quantity"]
+                or existing_sale_start != ticket["saleStart"]
+                or existing_sale_end != ticket["saleEnd"]
+            ):
+                flash("Sự kiện đã công khai nên không thể điều chỉnh loại vé.", "danger")
+                return _render_edit_event_page(event, event_types, ticket_types, selected_status), 400
+    else:
+        if removed_ticket_ids:
+            has_issued_tickets = (
+                db.session.query(Ticket.id)
+                .filter(Ticket.ticketTypeId.in_(removed_ticket_ids))
+                .first()
+            )
+            if has_issued_tickets:
+                flash("Không thể xóa loại vé đã phát sinh giao dịch.", "danger")
+                return _render_edit_event_page(event, event_types, ticket_types, selected_status), 400
 
     try:
         event.title = title
@@ -474,36 +624,41 @@ def organizer_edit_event(event_id: int):
         event.limitQuantity = limit_quantity
         event.status = _resolve_event_status_for_db(selected_status)
         event.eventTypeId = event_type_id
-        event.publishedAt = datetime.utcnow() if selected_status == "PUBLISHED" else None
+        if selected_status == "PUBLISHED":
+            if event.publishedAt is None:
+                event.publishedAt = datetime.utcnow()
+        else:
+            event.publishedAt = None
 
         if event_image_result and event_image_result.get("url"):
             event.image = event_image_result.get("url")
 
-        for ticket in ticket_payload:
-            ticket_id = ticket.get("id")
-            ticket_data = {
-                "name": ticket["name"],
-                "description": ticket["description"],
-                "price": ticket["price"],
-                "quantity": ticket["quantity"],
-                "saleStart": ticket["saleStart"],
-                "saleEnd": ticket["saleEnd"],
-            }
+        if allow_ticket_changes:
+            for ticket in ticket_payload:
+                ticket_id = ticket.get("id")
+                ticket_data = {
+                    "name": ticket["name"],
+                    "description": ticket["description"],
+                    "price": ticket["price"],
+                    "quantity": ticket["quantity"],
+                    "saleStart": ticket["saleStart"],
+                    "saleEnd": ticket["saleEnd"],
+                }
 
-            if ticket_id is None:
-                create_ticket_type(
-                    {
-                        **ticket_data,
-                        "eventId": event.id,
-                    },
-                    commit=False,
-                )
-            else:
-                target_ticket = existing_ticket_by_id[ticket_id]
-                update_ticket_type(target_ticket, ticket_data, commit=False)
+                if ticket_id is None:
+                    create_ticket_type(
+                        {
+                            **ticket_data,
+                            "eventId": event.id,
+                        },
+                        commit=False,
+                    )
+                else:
+                    target_ticket = existing_ticket_by_id[ticket_id]
+                    update_ticket_type(target_ticket, ticket_data, commit=False)
 
-        for ticket_id in removed_ticket_ids:
-            db.session.delete(existing_ticket_by_id[ticket_id])
+            for ticket_id in removed_ticket_ids:
+                db.session.delete(existing_ticket_by_id[ticket_id])
 
         db.session.commit()
     except Exception:
@@ -562,6 +717,10 @@ def organizer_update_ticket_type(event_id: int):
 
     if event.organizerId != organizer.id:
         return jsonify({"message": "Bạn không có quyền cập nhật loại vé của sự kiện này."}), 403
+
+    normalized_event_status = (event.status or "").strip().upper()
+    if normalized_event_status != "PENDING":
+        return jsonify({"message": "Chỉ có thể điều chỉnh vé khi sự kiện đang xử lý (PENDING)."}), 400
 
     payload = request.get_json(silent=True) or {}
     ticket_type_id = _parse_positive_int(payload.get("ticketTypeId"))

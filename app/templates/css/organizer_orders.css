@@ -25,6 +25,34 @@ body {
 .orders-card__header {
     padding: 16px;
     border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.orders-card__header-left {
+    min-width: 0;
+}
+
+.orders-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--text-dark);
+    white-space: nowrap;
+}
+
+.orders-back:hover {
+    background: #f9fafb;
 }
 
 .orders-title {

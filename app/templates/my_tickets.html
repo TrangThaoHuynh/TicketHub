@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+    .myt-page {
+        background: var(--light-bg);
+        padding: 22px 0 40px;
+    }
+
+    .myt-wrap {
+        max-width: 920px;
+    }
+
+    .myt-title {
+        font-weight: 700;
+        font-size: 20px;
+        margin: 0 0 14px;
+    }
+
+    .myt-list {
+        display: grid;
+        gap: 14px;
+    }
+
+    .myt-item {
+        display: grid;
+        grid-template-columns: 1fr 220px;
+        gap: 12px;
+        align-items: stretch;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 14px;
+    }
+
+    .myt-left {
+        min-width: 0;
+    }
+
+    .myt-event {
+        font-weight: 600;
+        font-size: 16px;
+        margin-bottom: 6px;
+    }
+
+    .myt-row {
+        font-size: 13px;
+        margin: 4px 0;
+    }
+
+    .myt-row b {
+        font-weight: 600;
+    }
+
+    .myt-total {
+        margin-top: 8px;
+        font-weight: 600;
+    }
+
+    .myt-status {
+        font-weight: 600;
+        margin-top: 4px;
+    }
+
+    .myt-status--paid {
+        color: #16a34a;
+    }
+
+    .myt-status--pending {
+        color: #f59e0b;
+    }
+
+    .myt-img {
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .myt-img img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    @media (max-width: 768px) {
+        .myt-item {
+            grid-template-columns: 1fr;
+        }
+
+        .myt-img {
+            height: 180px;
+        }
+    }
+</style>
+
+<div class="myt-page">
+    <div class="container myt-wrap">
+        <h1 class="myt-title">Vé của tôi</h1>
+
+        <div class="myt-list">
+            {# Cách A (đúng như ảnh): nếu backend truyền `orders` (mỗi order = 1 sự kiện/đơn) #}
+            {% if orders is defined and orders %}
+            {% for o in orders %}
+            <a class="myt-item text-decoration-none text-reset"
+                href="{{ url_for('orders.booking_detail', booking_id=o.booking_id) }}">
+                <div class="myt-left">
+                    <div class="myt-event">{{ o.event_title or 'Sự kiện' }}</div>
+                    <div class="myt-row">Thời gian đặt hàng<br><b>{{ o.created_at or '—' }}</b></div>
+                    <div class="myt-row">Số lượng<br><b>{{ o.quantity or 0 }}</b></div>
+                    <div class="myt-total">Tổng chi phí : {{ "{:,.0f}".format(o.total_amount or 0).replace(',', '.') }}
+                        đ</div>
+
+                    {% if (o.status or '') == 'paid' %}
+                    <div class="myt-status myt-status--paid">Đã thanh toán</div>
+                    {% else %}
+                    <div class="myt-status myt-status--pending">Đang chờ thanh toán</div>
+                    {% endif %}
+
+                    <div class="mt-2">
+                        <span class="text-primary text-decoration-underline">Xem chi tiết</span>
+                    </div>
+                </div>
+
+                <div class="myt-img">
+                    {% if o.event_image %}
+                    <img src="{{ o.event_image }}" alt="{{ o.event_title or 'Event' }}">
+                    {% else %}
+                    <div class="text-muted small">Chưa có ảnh</div>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+
+            {# Cách B (fallback với code hiện tại): route đang truyền `tickets` paginate #}
+            {% elif tickets is defined and tickets.items %}
+            {% for t in tickets.items %}
+            <div class="myt-item">
+                <div class="myt-left">
+                    <div class="myt-event">Vé: {{ t.ticketCode or t.id }}</div>
+                    <div class="myt-row">Thời gian đặt hàng<br>
+                        <b>{{ t.createdAt.strftime('%d-%m-%Y') if t.createdAt else '—' }}</b>
+                    </div>
+                    <div class="myt-row">Trạng thái<br><b>{{ t.status or '—' }}</b></div>
+                    <div class="myt-total">Tổng chi phí : {{ "{:,.0f}".format(t.price or 0).replace(',', '.') }} đ</div>
+                </div>
+                <div class="myt-img">
+                    <div class="text-muted small">Ảnh sự kiện (cần join backend)</div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="alert alert-light border mb-0">Bạn chưa có vé nào.</div>
+            {% endif %}
+        </div>
+
+        {# phân trang (nếu dùng tickets paginate) #}
+        {% if tickets is defined and tickets.pages and tickets.pages > 1 %}
+        <nav class="mt-3">
+            <ul class="pagination">
+                <li class="page-item {% if not tickets.has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('orders.my_tickets', page=tickets.prev_num) }}">Trước</a>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">{{ tickets.page }} / {{ tickets.pages }}</span>
+                </li>
+                <li class="page-item {% if not tickets.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('orders.my_tickets', page=tickets.next_num) }}">Sau</a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+
+        {# phân trang (nếu dùng bookings paginate cho orders mode) #}
+        {% if bookings is defined and bookings.pages and bookings.pages > 1 %}
+        <nav class="mt-3">
+            <ul class="pagination">
+                <li class="page-item {% if not bookings.has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('orders.my_tickets', page=bookings.prev_num) }}">Trước</a>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">{{ bookings.page }} / {{ bookings.pages }}</span>
+                </li>
+                <li class="page-item {% if not bookings.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('orders.my_tickets', page=bookings.next_num) }}">Sau</a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

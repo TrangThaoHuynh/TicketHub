@@ -1,0 +1,105 @@
+.report-page {
+  padding: 28px 0 40px;
+  background: #f6f8fb;
+  min-height: calc(100vh - 120px);
+}
+
+.dashboard-title {
+  text-align: center;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.admin-card {
+  border: 0;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.08);
+  min-height: 110px;
+}
+
+.admin-card .card-body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.icon-box {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef4ff;
+  color: #2f80ed;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.metric-label {
+  font-size: 17px;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.metric-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.report-panel {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.08);
+  padding: 22px;
+  margin-top: 24px;
+}
+
+.filter-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #111827;
+}
+
+.chart-box {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.08);
+  padding: 18px;
+  height: 100%;
+}
+
+.chart-box h5 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.event-list-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.event-list-item:last-child {
+  border-bottom: 0;
+}
+
+.chart-scroll-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 6px;
+}
+
+.chart-scroll-inner {
+  min-width: 100%;
+}
+
+.chart-scroll-inner canvas {
+  display: block;
+}

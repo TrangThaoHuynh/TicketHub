@@ -24,6 +24,10 @@ body {
 .order-detail-card__topbar {
     background: var(--primary-color);
     padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
 
 .order-detail-title {
@@ -31,6 +35,26 @@ body {
     font-size: 16px;
     font-weight: 700;
     color: #ffffff;
+}
+
+.order-detail-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    background: transparent;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 13px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.order-detail-back:hover {
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .order-detail-body {
@@ -91,7 +115,7 @@ body {
 }
 
 .info-value {
-    font-weight: 600;
+    font-weight: 300;
     text-align: left;
 }
 

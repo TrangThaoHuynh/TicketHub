@@ -54,6 +54,22 @@
     });
   }
 
+  function setupSelectedValue(selectId, dataAttrName) {
+    const select = document.getElementById(selectId);
+    if (!select) {
+      return;
+    }
+
+    // Lấy giá trị đã chọn từ data-* trong HTML
+    const selectedValue = select.dataset[dataAttrName];
+    if (selectedValue === undefined || selectedValue === null) {
+      return;
+    }
+
+    // Gán lại value cho select để tự chọn option đúng
+    select.value = selectedValue;
+  }
+
   function setupBackToTop() {
     const backToTopBtn = document.getElementById("backToTopBtn");
     if (!backToTopBtn) {
@@ -96,6 +112,9 @@
   document.addEventListener("DOMContentLoaded", function () {
     setupFilterDropdown("ticketFilterBtnDesktop", "ticketFilterPanelDesktop");
     setupFilterDropdown("ticketFilterBtnMobile", "ticketFilterPanelMobile");
+    setupSelectedValue("filterEventTypeDesktop", "selectedType");
+    setupSelectedValue("filterEventTypeMobile", "selectedType");
+
     setupBackToTop();
   });
 })();

@@ -170,50 +170,75 @@
             <h1 class="account-card__title">Cài đặt tài khoản</h1>
             <hr class="account-card__divider" />
 
-            <div class="avatar-row">
-                <img class="avatar-preview"
-                    src="{{ (current_user.avatar if current_user else None) or 'https://via.placeholder.com/84' }}"
-                    alt="Ảnh đại diện" />
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="mb-3">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} mb-2" role="alert">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
 
-                <div class="avatar-meta">
-                    <h6>Ảnh đại diện</h6>
-                    <p>Upload ảnh đại diện của bạn tại đây</p>
+            <form action="{{ url_for('main.account_update_avatar') }}" method="POST" enctype="multipart/form-data">
+                <div class="avatar-row">
+                    <img class="avatar-preview" id="avatarPreview"
+                        src="{{ (current_user.avatar if current_user else None) or 'https://via.placeholder.com/84' }}"
+                        alt="Ảnh đại diện" />
 
-                    <div class="avatar-upload">
-                        <input class="d-none" id="avatarInput" type="file" accept="image/*" />
-                        <label class="btn btn-outline-primary btn-sm" for="avatarInput">Upload</label>
+                    <div class="avatar-meta">
+                        <h6>Ảnh đại diện</h6>
+                        {% if (current_user.provider if current_user else '')|upper != 'GOOGLE' %}
+                        <p>Upload ảnh đại diện của bạn tại đây</p>
+                        {% endif %}
+
+                        <div class="avatar-upload">
+                            {% if (current_user.provider if current_user else '')|upper == 'GOOGLE' %}
+                            <button type="button" class="btn btn-outline-secondary btn-sm" disabled>Upload</button>
+                            <span class="text-muted small">(Tài khoản Google không đổi ảnh tại đây)</span>
+                            {% else %}
+                            <input class="d-none" id="avatarInput" name="avatar" type="file" accept="image/*" />
+                            <label class="btn btn-outline-primary btn-sm" for="avatarInput">Upload</label>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-            </div>
+            </form>
 
             <div class="readonly-row">
                 <div class="readonly-row__label">Tên tài khoản:</div>
                 <div class="readonly-row__value">{{ current_user.username if current_user else '' }}</div>
             </div>
 
-            <form class="account-form" autocomplete="off">
+            <form class="account-form" autocomplete="off" method="POST"
+                action="{{ url_for('main.account_update_profile') }}">
                 <div class="mb-3">
                     <label class="form-label" for="displayName">Họ &amp; tên</label>
-                    <input id="displayName" class="form-control" type="text" placeholder="Nhập họ & tên"
+                    <input id="displayName" name="name" class="form-control" type="text" placeholder="Nhập họ & tên"
                         value="{{ current_user.name if current_user else '' }}" />
                 </div>
 
                 <div class="row g-3">
                     <div class="col-12 col-md-6">
                         <label class="form-label" for="email">Email</label>
-                        <input id="email" class="form-control" type="email" placeholder="Nhập email"
-                            value="{{ current_user.email if current_user else '' }}" />
+                        <input id="email" name="email" class="form-control" type="email" placeholder="Nhập email"
+                            value="{{ current_user.email if current_user else '' }}" {% if (current_user.provider if
+                            current_user else '' )|upper=='GOOGLE' %}disabled{% endif %} />
+                        {% if (current_user.provider if current_user else '')|upper == 'GOOGLE' %}
+                        <div class="form-text">Email của tài khoản Google không thể chỉnh sửa.</div>
+                        {% endif %}
                     </div>
 
                     <div class="col-12 col-md-6">
                         <label class="form-label" for="phone">Số điện thoại</label>
-                        <input id="phone" class="form-control" type="tel" placeholder="Nhập số điện thoại"
-                            value="{{ current_user.phone if current_user else '' }}" />
+                        <input id="phone" name="phoneNumber" class="form-control" type="tel"
+                            placeholder="Nhập số điện thoại"
+                            value="{{ current_user.phoneNumber if current_user else '' }}" />
                     </div>
                 </div>
 
                 <div class="account-actions">
-                    <button type="button" class="btn btn-outline-primary px-4">Cập nhật</button>
+                    <button type="submit" class="btn btn-outline-primary px-4">Cập nhật</button>
                 </div>
             </form>
         </section>
@@ -227,24 +252,27 @@
 
             <div class="collapse" id="passwordCollapse">
                 <div class="password-collapse">
-                    <form autocomplete="off">
+                    <form autocomplete="off" method="POST" action="{{ url_for('main.account_change_password') }}">
                         <div class="mb-3">
                             <label class="form-label" for="currentPassword">Nhập mật khẩu hiện tại</label>
-                            <input id="currentPassword" class="form-control" type="password" placeholder="" />
+                            <input id="currentPassword" name="current_password" class="form-control" type="password"
+                                placeholder="" />
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label" for="newPassword">Nhập mật khẩu</label>
-                            <input id="newPassword" class="form-control" type="password" placeholder="" />
+                            <input id="newPassword" name="new_password" class="form-control" type="password"
+                                placeholder="" />
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label" for="confirmPassword">Nhập lại mật khẩu</label>
-                            <input id="confirmPassword" class="form-control" type="password" placeholder="" />
+                            <input id="confirmPassword" name="confirm_password" class="form-control" type="password"
+                                placeholder="" />
                         </div>
 
                         <div class="account-actions">
-                            <button type="button" class="btn btn-outline-primary px-4">Thay đổi</button>
+                            <button type="submit" class="btn btn-outline-primary px-4">Thay đổi</button>
                         </div>
                     </form>
                 </div>
@@ -252,4 +280,26 @@
         </section>
     </div>
 </div>
+
+<script>
+    (function () {
+        const input = document.getElementById('avatarInput');
+        const preview = document.getElementById('avatarPreview');
+        if (!input) return;
+
+        input.addEventListener('change', () => {
+            const file = input.files && input.files[0];
+            if (file && preview) {
+                try {
+                    preview.src = URL.createObjectURL(file);
+                } catch (e) {
+                    // ignore
+                }
+            }
+            if (input.form) {
+                input.form.submit();
+            }
+        });
+    })();
+</script>
 {% endblock %}

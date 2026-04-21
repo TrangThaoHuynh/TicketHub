@@ -1,0 +1,174 @@
+{% extends "base.html" %} {% block styles %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('login.static', filename='css/organizer_report.css') }}"
+/>
+{% endblock %} {% block content %} {% set selected_event_id =
+dashboard.filters.event_id %} {% set selected_start_date =
+dashboard.filters.start_date %} {% set selected_end_date =
+dashboard.filters.end_date %} {% set chart_labels = dashboard.chart["labels"] %}
+{% set chart_values = dashboard.chart["values"] %}
+
+<section class="report-page">
+  <div class="container">
+    <h1 class="report-title">
+      <i class="fa-solid fa-chart-column me-2"></i>Báo cáo Thống kê
+    </h1>
+
+    <div class="row g-3">
+      <div class="col-md-4">
+        <div class="card stat-card icon-card-1">
+          <div class="card-body">
+            <div>
+              <div class="stat-number">{{ dashboard.cards.total_events }}</div>
+              <div class="stat-label">Tổng sự kiện</div>
+            </div>
+            <i class="fa-regular fa-calendar-days stat-icon"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card stat-card icon-card-2">
+          <div class="card-body">
+            <div>
+              <div class="stat-number">
+                {{ "{:,.0f}".format(dashboard.cards.total_revenue) }}
+              </div>
+              <div class="stat-label">Doanh thu (VND)</div>
+            </div>
+            <i class="fa-solid fa-money-bill-wave stat-icon"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card stat-card icon-card-3">
+          <div class="card-body">
+            <div>
+              <div class="stat-number">
+                {{ dashboard.cards.ongoing_events }}
+              </div>
+              <div class="stat-label">Đang diễn ra</div>
+            </div>
+            <i class="fa-solid fa-circle-play stat-icon"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="report-panel">
+      <div class="report-section-title">Biểu đồ doanh thu</div>
+
+      <form method="get" class="row g-3 align-items-end mb-3">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Tên sự kiện</label>
+          <select class="form-select form-control-sm" name="eventId">
+            <option value="">Tất cả sự kiện</option>
+            {% for event in dashboard.event_options %} {% if selected_event_id
+            == event.id %}
+            <option value="{{ event.id }}" selected>{{ event.title }}</option>
+            {% else %}
+            <option value="{{ event.id }}">{{ event.title }}</option>
+            {% endif %} {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Từ ngày</label>
+          <input
+            type="date"
+            class="form-control form-control-sm"
+            name="startDate"
+            value="{{ selected_start_date }}"
+          />
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">Đến ngày</label>
+          <input
+            type="date"
+            class="form-control form-control-sm"
+            name="endDate"
+            value="{{ selected_end_date }}"
+          />
+        </div>
+
+        <div class="col-md-2 filter-actions">
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-filter me-1"></i>Lọc
+          </button>
+          <a
+            href="{{ url_for('reports.organizer_reports') }}"
+            class="btn btn-outline-secondary btn-sm"
+          >
+            Xóa lọc
+          </a>
+        </div>
+      </form>
+
+      {% if chart_labels %}
+      <script id="organizer-chart-data" type="application/json">
+        {{ {"labels": chart_labels, "values": chart_values} | tojson }}
+      </script>
+
+      <canvas id="organizerRevenueChart" height="95"></canvas>
+      {% else %}
+      <div class="alert alert-light border mb-0">
+        Chưa có dữ liệu doanh thu để hiển thị biểu đồ.
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="report-panel">
+      <div class="report-section-title">Danh sách sự kiện</div>
+
+      <div class="table-responsive">
+        <table
+          class="table table-bordered table-hover align-middle mb-0 report-table"
+        >
+          <thead>
+            <tr>
+              <th style="width: 70px">ID</th>
+              <th>Tên sự kiện</th>
+              <th style="width: 130px">Ngày diễn ra</th>
+              <th style="width: 110px">Tổng vé</th>
+              <th style="width: 110px">Vé đã bán</th>
+              <th style="width: 150px">Doanh thu</th>
+              <th style="width: 130px">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if dashboard.rows %} {% for row in dashboard.rows %}
+            <tr>
+              <td class="text-center fw-semibold">{{ row.id }}</td>
+              <td>{{ row.title }}</td>
+              <td class="text-center">{{ row.start_date_text }}</td>
+              <td class="text-center">{{ row.total_tickets }}</td>
+              <td class="text-center">{{ row.sold_tickets }}</td>
+              <td class="text-end fw-semibold">
+                {{ "{:,.0f}".format(row.revenue) }}
+              </td>
+              <td class="text-center">
+                <span class="badge text-bg-{{ row.status_badge }} badge-soft"
+                  >{{ row.status_label }}</span
+                >
+              </td>
+            </tr>
+            {% endfor %} {% else %}
+            <tr>
+              <td colspan="7" class="text-center text-muted py-4">
+                Bạn chưa có sự kiện nào để thống kê.
+              </td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %} {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('login.static', filename='js/organizer_report.js') }}"></script>
+{% endblock %}
