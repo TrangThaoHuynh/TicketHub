@@ -1,5 +1,5 @@
 import os
-DEEPFACE_CACHE_DIR = r"C:\Study\QLDAPMem-Project\deepface_cache"
+DEEPFACE_CACHE_DIR = r"D:\deepface_cache"
 os.makedirs(DEEPFACE_CACHE_DIR, exist_ok=True)
 os.environ["DEEPFACE_HOME"] = DEEPFACE_CACHE_DIR
 
