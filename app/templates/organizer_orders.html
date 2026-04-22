@@ -50,8 +50,9 @@
               aria-label="Trạng thái"
             >
               <option value="">Trạng thái</option>
-              <option value="paid">Đã thanh toán</option>
-              <option value="unpaid">Chưa thanh toán</option>
+              <option value="success">Đã thanh toán</option>
+              <option value="pending">Đang chờ thanh toán</option>
+              <option value="failed">Thanh toán thất bại</option>
             </select>
           </div>
 
@@ -84,11 +85,11 @@
           </thead>
           <tbody id="ordersTbody">
             {% if orders is defined and orders %} {% for o in orders %} {% set
-            status_value = (o.status or '')|lower %}
+            st = (o.order_status or '')|string|upper %}
             <tr
               class="js-order-row"
               data-order-code="{{ o.code or o.id }}"
-              data-status="{{ 'paid' if status_value in ['paid', 'success', 'completed', 'done'] else 'unpaid' }}"
+              data-status="{{ st|lower }}"
             >
               <td>{{ o.code or o.id }}</td>
               <td>{{ o.customer_name or '—' }}</td>
@@ -101,14 +102,17 @@
                 %} — {% endif %}
               </td>
               <td>
-                {% if status_value in ['paid', 'success', 'completed', 'done']
-                %}
+                {% if st == 'SUCCESS' %}
                 <span class="orders-status orders-status--paid"
-                  >Đã thanh toán</span
+                  >{{ o.order_status_label or 'Đã thanh toán' }}{% if o.has_cancelled_ticket %} (Đã hủy vé){% endif %}</span
+                >
+                {% elif st == 'FAILED' %}
+                <span class="orders-status orders-status--failed"
+                  >{{ o.order_status_label or 'Thanh toán thất bại' }}</span
                 >
                 {% else %}
                 <span class="orders-status orders-status--unpaid"
-                  >Chưa thanh toán</span
+                  >{{ o.order_status_label or 'Đang chờ thanh toán' }}</span
                 >
                 {% endif %}
               </td>

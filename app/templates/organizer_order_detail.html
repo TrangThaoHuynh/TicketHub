@@ -15,8 +15,10 @@
       _order else '—')) %} {% set created_at = (_order.created_at if _order and
       _order.created_at is defined else '—') %} {% set payment_method =
       (_order.payment_method if _order and _order.payment_method is defined else
-      '—') %} {% set status_value = ((_order.status if _order and _order.status
-      is defined else 'paid')|string|lower) %} {% set event_title =
+      '—') %} {% set st = ((_order.order_status if _order and _order.order_status
+      is defined else 'PENDING')|string|upper) %} {% set st_label =
+      (_order.order_status_label if _order and _order.order_status_label is defined else '') %} {% set has_cancelled_ticket =
+      (_order.has_cancelled_ticket if _order and _order.has_cancelled_ticket is defined else false) %} {% set event_title =
       (_event.title if _event and _event.title is defined else '—') %} {% set
       event_time = (_event.time_text if _event and _event.time_text is defined
       else '—') %} {% set event_location = (_event.location if _event and
@@ -66,15 +68,12 @@
               </div>
               <div class="info-item">
                 <span class="info-label">Trạng thái:</span>
-                {% if status_value in ['paid', 'success', 'completed', 'done']
-                %}
-                <span class="info-value info-status info-status--paid"
-                  >Đã thanh toán</span
-                >
+                {% if st == 'SUCCESS' %}
+                <span class="info-value info-status info-status--paid">{{ st_label or 'Đã thanh toán' }}{% if has_cancelled_ticket %} (Đã hủy vé){% endif %}</span>
+                {% elif st == 'FAILED' %}
+                <span class="info-value info-status info-status--failed">{{ st_label or 'Thanh toán thất bại' }}</span>
                 {% else %}
-                <span class="info-value info-status info-status--unpaid"
-                  >Chưa thanh toán</span
-                >
+                <span class="info-value info-status info-status--pending">{{ st_label or 'Đang chờ thanh toán' }}</span>
                 {% endif %}
               </div>
             </div>
