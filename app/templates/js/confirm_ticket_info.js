@@ -168,9 +168,18 @@ function renderTicketHolderRows(item, requireFace) {
 
   for (let idx = 1; idx <= item.quantity; idx += 1) {
     const inputBase = item.ticketTypeId + "-" + idx;
-    const faceHint = requireFace
-      ? "<small>Khuôn mặt (bắt buộc)</small>"
-      : "<small>Khuôn mặt (không bắt buộc)</small>";
+
+    const faceFieldHtml = requireFace
+      ? '<div class="field-group field-group--full">' +
+        '<label for="face-' +
+        inputBase +
+        '">Khuôn mặt</label>' +
+        '<input id="face-' +
+        inputBase +
+        '" class="js-holder-face" type="file" accept="image/*" required>' +
+        "<small>Khuôn mặt (bắt buộc)</small>" +
+        "</div>"
+      : "";
 
     rows.push(
       '<div class="ticket-holder" data-holder-key="' +
@@ -208,17 +217,7 @@ function renderTicketHolderRows(item, requireFace) {
         "</div>" +
         '<span class="name-helper phone-helper js-phone-helper">hợp lệ!</span>' +
         "</div>" +
-        '<div class="field-group field-group--full">' +
-        '<label for="face-' +
-        inputBase +
-        '">Khuôn mặt</label>' +
-        '<input id="face-' +
-        inputBase +
-        '" class="js-holder-face" type="file" accept="image/*" ' +
-        (requireFace ? "required" : "") +
-        ">" +
-        faceHint +
-        "</div>" +
+        faceFieldHtml +
         "</div>" +
         "</div>",
     );

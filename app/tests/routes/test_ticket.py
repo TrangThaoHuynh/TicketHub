@@ -337,7 +337,7 @@ def test_checkout_event_tickets_success_creates_booking_and_tickets(app, client)
 			event_status="PUBLISHED",
 			quantity=5,
 			price=Decimal("150000.00"),
-			has_face_reg=True,
+			has_face_reg=False,
 		)
 
 	with client.session_transaction() as sess:
@@ -359,7 +359,10 @@ def test_checkout_event_tickets_success_creates_booking_and_tickets(app, client)
 	with patch(
 		"app.routes.ticket_routes.build_payment_url",
 		return_value={"payment_url": "https://payment.local/checkout"},
-	) as mock_build_payment:
+	) as mock_build_payment, patch(
+		"app.routes.ticket_routes._create_and_upload_qr_url",
+		return_value=("https://cdn.local/ticket-qr.png", None),
+	) as mock_create_qr:
 		response = client.post(f"/events/{event_id}/checkout", json=payload)
 
 	assert response.status_code == 200
@@ -367,6 +370,7 @@ def test_checkout_event_tickets_success_creates_booking_and_tickets(app, client)
 	assert body["ok"] is True
 	assert body["paymentUrl"] == "https://payment.local/checkout"
 	mock_build_payment.assert_called_once()
+	assert mock_create_qr.call_count == 2
 
 	with app.app_context():
 		booking = db.session.get(Booking, body["bookingId"])
@@ -377,9 +381,65 @@ def test_checkout_event_tickets_success_creates_booking_and_tickets(app, client)
 		booking_tickets = Ticket.query.filter(Ticket.bookingId == booking.id).all()
 		assert len(booking_tickets) == 2
 		assert all(ticket.status == "PENDING" for ticket in booking_tickets)
+		assert all(ticket.qrCode == "https://cdn.local/ticket-qr.png" for ticket in booking_tickets)
+		assert all(ticket.faceEmbedding is None for ticket in booking_tickets)
 
 		reloaded_ticket_type = db.session.get(TicketType, ticket_type_id)
 		assert reloaded_ticket_type.quantity == 3
+
+
+def test_checkout_event_tickets_face_reg_creates_face_embedding_only(app, client):
+	with app.app_context():
+		customer_id = _new_user(make_customer=True)
+		event_id, ticket_type_id = _new_event_and_ticket_type(
+			event_status="PUBLISHED",
+			quantity=2,
+			price=Decimal("120000.00"),
+			has_face_reg=True,
+		)
+
+	with client.session_transaction() as sess:
+		sess["user_id"] = customer_id
+
+	payload = {
+		"tickets": [
+			{
+				"ticketTypeId": ticket_type_id,
+				"quantity": 1,
+				"holders": [
+					{
+						"fullName": "Nguyen Van A",
+						"phoneNumber": "0912345678",
+						"faceImageBase64": "data:image/png;base64,ZmFrZQ==",
+					}
+				],
+			}
+		]
+	}
+
+	with patch(
+		"app.routes.ticket_routes.build_payment_url",
+		return_value={"payment_url": "https://payment.local/checkout"},
+	), patch(
+		"app.routes.ticket_routes.extract_face_embedding_from_base64",
+		return_value="[0.1,0.2,0.3]",
+	) as mock_extract_face, patch(
+		"app.routes.ticket_routes._create_and_upload_qr_url",
+		return_value=("https://cdn.local/ticket-qr.png", None),
+	) as mock_create_qr:
+		response = client.post(f"/events/{event_id}/checkout", json=payload)
+
+	assert response.status_code == 200
+	assert response.get_json()["ok"] is True
+	mock_extract_face.assert_called_once()
+	mock_create_qr.assert_not_called()
+
+	with app.app_context():
+		booking_id = response.get_json()["bookingId"]
+		tickets = Ticket.query.filter(Ticket.bookingId == booking_id).all()
+		assert len(tickets) == 1
+		assert tickets[0].faceEmbedding == "[0.1,0.2,0.3]"
+		assert tickets[0].qrCode is None
 
 
 # ================= PAYMENT RETURN ROUTE =================

@@ -125,6 +125,17 @@ def ensure_ticket_qr_token(ticket: Ticket):
     Đảm bảo Ticket.qrCode luôn là token QR hợp lệ.
     Nếu qrCode rỗng hoặc là dữ liệu cũ không hợp lệ thì sinh token mới.
     """
+    ticket_type = TicketType.query.get(ticket.ticketTypeId)
+    event = Event.query.get(ticket_type.eventId) if ticket_type else None
+
+    # Event dùng nhận diện khuôn mặt thì không được phát sinh QR token.
+    if event and bool(event.hasFaceReg):
+        if ticket.qrCode is not None:
+            ticket.qrCode = None
+            db.session.add(ticket)
+            db.session.commit()
+        return None
+
     if ticket.qrCode:
         is_valid, payload, _ = verify_token(ticket.qrCode)
 
@@ -134,7 +145,6 @@ def ensure_ticket_qr_token(ticket: Ticket):
             if payload_ticket_id == str(ticket.id):
                 return ticket.qrCode
 
-    ticket_type = TicketType.query.get(ticket.ticketTypeId)
     event_id = ticket_type.eventId if ticket_type else None
 
     iat = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -159,6 +169,9 @@ def build_ticket_qr_png(ticket: Ticket):
     Trả về bytes PNG của mã QR từ token đã ký.
     """
     token = ensure_ticket_qr_token(ticket)
+    if not token:
+        raise ValueError("Sự kiện này dùng check-in khuôn mặt, không hỗ trợ QR code.")
+
     img = qrcode.make(token)
     buf = BytesIO()
     img.save(buf, format="PNG")

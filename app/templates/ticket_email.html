@@ -127,6 +127,7 @@
                   align="center"
                   style="padding: 12px 14px; border-bottom: 1px solid #e9ecef"
                 >
+                  {% if ticket.qr_cid %}
                   <img
                     src="cid:{{ ticket.qr_cid }}"
                     alt="QR Code"
@@ -141,6 +142,28 @@
                       padding: 4px;
                     "
                   />
+                  {% else %}
+                  <div
+                    style="
+                      width: 120px;
+                      min-height: 120px;
+                      margin: 0 auto 10px auto;
+                      border: 2px dashed #f59e0b;
+                      border-radius: 8px;
+                      background: #fff8e6;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      padding: 10px;
+                      color: #92400e;
+                      font-size: 12px;
+                      font-weight: 700;
+                      line-height: 1.4;
+                    "
+                  >
+                    Check-in bằng khuôn mặt
+                  </div>
+                  {% endif %}
 
                   <div
                     style="

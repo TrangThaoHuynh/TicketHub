@@ -160,6 +160,31 @@
         border: 1px solid #e5e7eb;
         border-radius: 6px;
         background: #fff;
+        display: block;
+        margin: 0 auto;
+    }
+
+    .od-qr-face {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 6px;
+        padding: 12px;
+        text-align: center;
+    }
+
+    .od-qr-face__icon {
+        font-size: 36px;
+        color: #1c7ce2;
+    }
+
+    .od-qr-face__text {
+        margin: 0;
+        padding: 0 8px;
+        font-size: 12px;
+        line-height: 1.35;
+        color: #475569;
     }
 
     .od-code-label {
@@ -346,7 +371,14 @@
                     <a class="od-person od-person-link"
                         href="{{ url_for('orders.ticket_detail', ticket_id=it.ticket_id) }}">
                         <div class="od-person__name">{{ it.holder_name or '—' }}</div>
+                        {% if it.has_face_reg %}
+                        <div class="od-qr od-qr-face">
+                            <i class="fa-solid fa-user-check od-qr-face__icon"></i>
+                            <small class="od-qr-face__text">Vé xác thực bằng khuôn mặt</small>
+                        </div>
+                        {% else %}
                         <img class="od-qr" src="{{ it.qr_url }}" alt="QR" />
+                        {% endif %}
                         <div class="od-code-label">Mã vé</div>
                         <div class="od-code">
                             <span class="js-ticket-code">{{ it.ticket_code }}</span>
