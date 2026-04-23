@@ -1,8 +1,5 @@
 {% extends 'base.html' %} {% block styles %}
-<link
-  rel="stylesheet"
-  href="{{ url_for('login.static', filename='css/organizer_order_detail.css') }}"
-/>
+<link rel="stylesheet" href="{{ url_for('login.static', filename='css/organizer_order_detail.css') }}" />
 {% endblock %} {% block content %}
 <div class="order-detail-page">
   <div class="container">
@@ -17,8 +14,10 @@
       (_order.payment_method if _order and _order.payment_method is defined else
       '—') %} {% set st = ((_order.order_status if _order and _order.order_status
       is defined else 'PENDING')|string|upper) %} {% set st_label =
-      (_order.order_status_label if _order and _order.order_status_label is defined else '') %} {% set has_cancelled_ticket =
-      (_order.has_cancelled_ticket if _order and _order.has_cancelled_ticket is defined else false) %} {% set event_title =
+      (_order.order_status_label if _order and _order.order_status_label is defined else '') %} {% set
+      has_cancelled_ticket =
+      (_order.has_cancelled_ticket if _order and _order.has_cancelled_ticket is defined else false) %} {% set
+      event_title =
       (_event.title if _event and _event.title is defined else '—') %} {% set
       event_time = (_event.time_text if _event and _event.time_text is defined
       else '—') %} {% set event_location = (_event.location if _event and
@@ -28,10 +27,7 @@
         <h1 class="order-detail-title">Chi tiết đơn mua</h1>
 
         {% if _event and _event.id is defined %}
-        <a
-          class="order-detail-back"
-          href="{{ url_for('organizer.organizer_event_orders', event_id=_event.id) }}"
-        >
+        <a class="order-detail-back" href="{{ url_for('organizer.organizer_event_orders', event_id=_event.id) }}">
           <i class="fa-solid fa-arrow-left"></i>
           <span>Trở lại quản lý đơn</span>
         </a>
@@ -69,7 +65,8 @@
               <div class="info-item">
                 <span class="info-label">Trạng thái:</span>
                 {% if st == 'SUCCESS' %}
-                <span class="info-value info-status info-status--paid">{{ st_label or 'Đã thanh toán' }}{% if has_cancelled_ticket %} (Đã hủy vé){% endif %}</span>
+                <span class="info-value info-status info-status--paid">{{ st_label or 'Đã thanh toán' }}{% if
+                  has_cancelled_ticket %} (Đã hủy vé){% endif %}</span>
                 {% elif st == 'FAILED' %}
                 <span class="info-value info-status info-status--failed">{{ st_label or 'Thanh toán thất bại' }}</span>
                 {% else %}

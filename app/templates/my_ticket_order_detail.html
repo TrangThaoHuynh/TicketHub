@@ -61,6 +61,19 @@
       </div>
     </div>
 
+        <div class="od-section mt-2">
+            <div class="od-summary">
+                <div>
+                    {% set st = (order_status or '')|string|upper %}
+                    <div
+                        class="od-summary__title {{ 'od-summary__title--success' if st == 'SUCCESS' else ('od-summary__title--failed' if st == 'FAILED' else 'od-summary__title--pending') }}">
+                        {{ order_status_label or ('Đã thanh toán' if st == 'SUCCESS' else ('Thanh toán thất bại' if st
+                        == 'FAILED' else 'Đang chờ thanh toán')) }}{% if is_refunded %} (Đã hủy vé){% endif %}
+                    </div>
+                    <div class="od-summary__amount">
+                        {{ "{:,.0f}".format(total_amount or 0).replace(',', '.') }}đ
+                    </div>
+                    <a class="od-summary__link" href="#">Chi tiết thanh toán</a>
     <div class="od-section">
       <div class="od-event">
         <div>
