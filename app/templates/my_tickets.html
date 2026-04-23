@@ -24,12 +24,14 @@
                     {% set st = (o.order_status or '')|string|upper %}
                     {% if st == 'SUCCESS' %}
                     <div class="myt-status myt-status--paid">
-                        {{ o.order_status_label or 'Đã thanh toán' }}{% if o.has_cancelled_ticket %} (Đã hủy vé){% endif %}
+                        {{ o.order_status_label or 'Đã thanh toán' }}{% if o.has_cancelled_ticket %} (Đã hủy vé){% endif
+                        %}
                     </div>
                     {% elif st == 'FAILED' %}
                     <div class="myt-status myt-status--failed">{{ o.order_status_label or 'Thanh toán thất bại' }}</div>
                     {% else %}
-                    <div class="myt-status myt-status--pending">{{ o.order_status_label or 'Đang chờ thanh toán' }}</div>
+                    <div class="myt-status myt-status--pending">{{ o.order_status_label or 'Đang chờ thanh toán' }}
+                    </div>
                     {% endif %}
 
                     <div class="mt-2">
