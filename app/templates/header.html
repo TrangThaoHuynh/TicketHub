@@ -118,6 +118,10 @@
                 <button type="submit" class="btn btn-primary" formnovalidate>
                   Áp dụng
                 </button>
+                <a class="btn btn-outline-secondary"
+                  href="{{ url_for('main.index', keyword=request.args.get('keyword', '')) }}">
+                  Bỏ lọc
+                </a>
                 <button type="button" class="btn btn-outline-secondary js-ticket-filter-close">
                   Đóng
                 </button>
@@ -313,6 +317,10 @@
                 <button type="submit" class="btn btn-primary" formnovalidate>
                   Áp dụng
                 </button>
+                <a class="btn btn-outline-secondary"
+                  href="{{ url_for('main.index', keyword=request.args.get('keyword', '')) }}">
+                  Bỏ lọc
+                </a>
                 <button type="button" class="btn btn-outline-secondary js-ticket-filter-close">
                   Đóng
                 </button>
