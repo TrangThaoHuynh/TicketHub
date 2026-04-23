@@ -136,6 +136,7 @@
 
             <button id="btnSubmit" class="btn btn-success w-100 mt-3" type="button" disabled
               data-event-id="{{ event.id }}" data-event-title="{{ event.title }}"
+              data-event-limit-quantity="{{ event.limitQuantity if event.limitQuantity is not none else '' }}"
               data-confirm-url="{{ url_for('event.confirm_ticket_info', event_id=event.id) }}">
               <i class="fas fa-shopping-cart me-2"></i>Mua vé
             </button>

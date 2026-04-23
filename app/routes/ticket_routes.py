@@ -331,6 +331,17 @@ def checkout_event_tickets(event_id: int):
 	if parse_error:
 		return jsonify({"ok": False, "message": parse_error}), 400
 
+	event_limit_quantity = _parse_positive_int(getattr(event, "limitQuantity", None))
+	if event_limit_quantity is not None:
+		total_requested_quantity = sum(item["quantity"] for item in checkout_tickets)
+		if total_requested_quantity > event_limit_quantity:
+			return jsonify(
+				{
+					"ok": False,
+					"message": f"Sự kiện này chỉ cho mua {event_limit_quantity} vé.",
+				}
+			), 400
+
 	ticket_type_ids = [item["ticketTypeId"] for item in checkout_tickets]
 	unique_ticket_type_ids = list(set(ticket_type_ids))
 

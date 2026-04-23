@@ -13,6 +13,11 @@ function clampQty(value, max) {
   return normalized;
 }
 
+function parseEventLimitQuantity(value) {
+  const parsed = parseInt(value || "0", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 function recalcSubtotal() {
   let sum = 0;
   document.querySelectorAll(".qty-input").forEach((inp) => {
@@ -149,6 +154,25 @@ function restorePendingOrder() {
 function goToConfirmPage() {
   const submitBtn = document.getElementById("btnSubmit");
   if (!submitBtn || submitBtn.disabled) return;
+
+  const selectedTickets = collectSelectedTickets();
+  if (!selectedTickets.length) {
+    alert("Vui lòng chọn ít nhất một loại vé để tiếp tục.");
+    return;
+  }
+
+  const limitQuantity = parseEventLimitQuantity(
+    submitBtn.dataset.eventLimitQuantity,
+  );
+  const totalQuantity = selectedTickets.reduce(
+    (acc, item) => acc + (item.quantity || 0),
+    0,
+  );
+
+  if (limitQuantity !== null && totalQuantity > limitQuantity) {
+    alert(`Sự kiện này chỉ cho mua ${limitQuantity} vé.`);
+    return;
+  }
 
   const payload = savePendingOrder();
   if (!payload || !payload.tickets || payload.tickets.length === 0) {
