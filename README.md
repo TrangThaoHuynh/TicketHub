@@ -1,123 +1,107 @@
 # TicketHub
 
-TicketHub là hệ thống bán vé sự kiện trực tuyến được xây dựng bằng Flask, hướng tới 3 nhóm người dùng chính: khách hàng, nhà tổ chức sự kiện và quản trị viên. Hệ thống hỗ trợ quản lý sự kiện, quản lý loại vé, đặt vé trực tuyến, quản lý đơn mua, phát hành vé điện tử dạng QR, theo dõi báo cáo thống kê và vận hành qua khu quản trị riêng.
+Hệ thống **bán vé sự kiện trực tuyến** được xây dựng nhằm hỗ trợ quản lý sự kiện, bán vé, thanh toán, phát hành vé điện tử và kiểm soát check-in cho người tham gia. Dự án hướng tới việc số hóa quy trình tổ chức sự kiện, giúp khách hàng đặt vé thuận tiện hơn, đồng thời hỗ trợ nhà tổ chức và quản trị viên quản lý dữ liệu hiệu quả.
 
-## Mục tiêu dự án
+## Mục lục
 
-Dự án được xây dựng nhằm số hóa quy trình tổ chức và bán vé sự kiện, giúp:
+- [✨ Tính năng](#-tính-năng)
+- [🛠️ Yêu cầu môi trường](#️-yêu-cầu-môi-trường)
+- [🚀 Bắt đầu](#-bắt-đầu)
+- [🔧 Cấu hình biến môi trường](#-cấu-hình-biến-môi-trường)
+- [📂 Cấu trúc thư mục](#-cấu-trúc-thư-mục)
+- [👥 Phân quyền người dùng](#-phân-quyền-người-dùng)
+- [🧪 Kiểm thử](#-kiểm-thử)
+- [📧 Liên hệ](#-liên-hệ)
 
-- Khách hàng dễ dàng tìm kiếm, xem chi tiết và đặt vé sự kiện
-- Nhà tổ chức quản lý sự kiện, vé, đơn mua và theo dõi hiệu quả kinh doanh
-- Quản trị viên quản lý người dùng, dữ liệu hệ thống và theo dõi thống kê tổng quan
+---
 
-## Công nghệ sử dụng
+## ✨ Tính năng
 
-### Backend
-
-- Python
-- Flask
-- Flask-SQLAlchemy
-- SQLAlchemy
-- PyMySQL
-
-### Xác thực và tích hợp
-
-- Flask-Login
-- Authlib
-- Google OAuth
-- Flask-Mail
-- Cloudinary
-
-### Quản trị và tiện ích
-
-- Flask-Admin
-- qrcode
-- Pillow
-- requests
-
-### Frontend
-
-- HTML
-- CSS
-- JavaScript
-
-## Kiến trúc dự án
-
-Dự án sử dụng mô hình app factory của Flask và tổ chức mã nguồn theo hướng tách lớp rõ ràng:
-
-- `models`: mô hình dữ liệu
-- `routes`: xử lý request/response
-- `services`: nghiệp vụ hệ thống
-- `utils`: hàm tiện ích
-- `templates`: giao diện HTML
-- `static`: CSS, JavaScript, hình ảnh tĩnh
-- `tests`: kiểm thử
-
-## Chức năng chính
-
-### 1. Khách hàng
+### 1. Quản lý tài khoản và xác thực
 
 - Đăng ký, đăng nhập tài khoản
-- Hỗ trợ cấu hình đăng nhập Google
-- Xem danh sách sự kiện
-- Xem chi tiết sự kiện
-- Chọn loại vé và đặt vé
-- Xem danh sách vé đã mua
-- Xem chi tiết đơn mua
-- Xem vé điện tử và mã QR của từng vé
+- Hỗ trợ đăng nhập bằng Google
+- Quản lý hồ sơ người dùng
+- Phân quyền theo vai trò: **Khách hàng**, **Nhà tổ chức**, **Quản trị viên**
 
-### 2. Nhà tổ chức sự kiện
+### 2. Quản lý sự kiện
 
-- Tạo và quản lý sự kiện
-- Quản lý loại vé
-- Theo dõi đơn mua theo từng sự kiện
-- Kiểm tra / check-in vé theo luồng nghiệp vụ của hệ thống
-- Xem dashboard báo cáo thống kê cho sự kiện của mình
+- Tạo, chỉnh sửa và cập nhật thông tin sự kiện
+- Quản lý loại sự kiện
+- Quản lý loại vé và giá vé
+- Cấu hình phương thức check-in cho sự kiện:
+  - Check-in bằng **QR**
+  - Check-in bằng **khuôn mặt**
 
-### 3. Quản trị viên
+### 3. Đặt vé và thanh toán
+
+- Chọn loại vé và số lượng vé
+- Nhập thông tin cho từng vé
+- Thanh toán trực tuyến qua VNPay
+- Tạo đơn đặt vé và cập nhật trạng thái thanh toán
+- Hỗ trợ gửi vé điện tử qua email
+
+### 4. Vé điện tử và check-in
+
+- Phát hành vé điện tử cho từng người tham gia
+- Sinh mã QR cho vé đối với sự kiện dùng check-in QR
+- Hỗ trợ quét vé tại cổng
+- Hỗ trợ check-in bằng khuôn mặt đối với sự kiện đã bật xác thực khuôn mặt
+
+### 5. Dashboard và báo cáo
+
+- Dashboard riêng cho **nhà tổ chức**
+- Dashboard quản trị cho **admin**
+- Theo dõi doanh thu, số lượng vé bán ra, trạng thái sự kiện
+- Thống kê dữ liệu liên quan đến hoạt động bán vé
+
+### 6. Quản trị hệ thống
 
 - Quản lý người dùng
 - Quản lý sự kiện
-- Quản lý loại sự kiện và loại vé
-- Quản lý đơn mua, thanh toán, vé
-- Truy cập dashboard quản trị tại `/admin`
-- Xem báo cáo thống kê toàn hệ thống
-- Duyệt nhà tổ chức qua giao diện quản trị
+- Quản lý đơn đặt vé
+- Quản lý thanh toán
+- Quản lý vé
+- Khu vực quản trị riêng tại `/admin`
 
-## Vé điện tử và QR
+---
 
-Hệ thống có phần xử lý vé điện tử và mã QR:
+## 🛠️ Yêu cầu môi trường
 
-- Mỗi vé có mã vé riêng
-- Hệ thống có thể tạo token QR đã ký
-- Có route xuất ảnh QR cho vé
-- Người dùng có thể xem chi tiết vé trong khu “Vé của tôi”
+Để chạy dự án, bạn cần chuẩn bị:
 
-## Dashboard và quản trị
+- **Python 3.10+**
+- **MySQL**
+- **Cloudinary** để lưu ảnh
+- **Tài khoản Gmail / SMTP** để gửi email
+- **Google OAuth credentials** nếu dùng đăng nhập Google
 
-Hệ thống có 2 nhóm dashboard chính:
+---
 
-- Dashboard báo cáo cho **nhà tổ chức**
-- Dashboard báo cáo cho **admin**
+## 🚀 Bắt đầu
 
-Ngoài ra, hệ thống tích hợp **Flask-Admin** để quản lý dữ liệu hệ thống tại đường dẫn `/admin`.
+Sau khi cài đặt Python, chạy các lệnh sau để khởi động dự án:
 
-## Cấu trúc thư mục tham khảo
+```bash
+# clone project
+git clone https://github.com/TrangThaoHuynh/TicketHub.git
 
-```text
-TicketHub/
-├── app/
-│   ├── models/
-│   ├── routes/
-│   ├── services/
-│   ├── static/
-│   ├── templates/
-│   ├── tests/
-│   ├── utils/
-│   ├── __init__.py
-│   ├── admin.py
-│   └── config.py
-├── requirements.txt
-├── run.py
-└── README.md
+# di chuyển vào thư mục project
+cd TicketHub
+
+# tạo môi trường ảo
+python -m venv venv
+
+# kích hoạt môi trường ảo
+# Windows
+venv\Scripts\activate
+
+# macOS / Linux
+source venv/bin/activate
+
+# cài đặt thư viện
+pip install -r requirements.txt
+
+# chạy ứng dụng
+python run.py
 ```
