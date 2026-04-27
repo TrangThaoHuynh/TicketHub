@@ -1,4 +1,13 @@
-# TicketHub
+# 🎟️ TicketHub
+
+<p align="left">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white">
+  <img alt="Flask" src="https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white">
+  <img alt="MySQL" src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white">
+  <img alt="SQLAlchemy" src="https://img.shields.io/badge/SQLAlchemy-D71F00?style=for-the-badge&logo=sqlalchemy&logoColor=white">
+  <img alt="Cloudinary" src="https://img.shields.io/badge/Cloudinary-3448C5?style=for-the-badge&logo=cloudinary&logoColor=white">
+  <img alt="Google OAuth" src="https://img.shields.io/badge/Google%20OAuth-4285F4?style=for-the-badge&logo=google&logoColor=white">
+</p>
 
 Hệ thống **bán vé sự kiện trực tuyến** được xây dựng nhằm hỗ trợ quản lý sự kiện, bán vé, thanh toán, phát hành vé điện tử và kiểm soát check-in cho người tham gia. Dự án hướng tới việc số hóa quy trình tổ chức sự kiện, giúp khách hàng đặt vé thuận tiện hơn, đồng thời hỗ trợ nhà tổ chức và quản trị viên quản lý dữ liệu hiệu quả.
 
