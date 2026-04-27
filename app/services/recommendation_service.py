@@ -22,33 +22,46 @@ def _get_project_root():
     return Path(__file__).parent.parent.parent
 
 def _load_ml_model():
-    
     global _model_cache, _vectorizer_cache, _label_encoder_cache, _model_loaded
-    
+
     if _model_loaded:
         return _model_cache, _vectorizer_cache, _label_encoder_cache
-    
+
     try:
         root = _get_project_root()
-        
-        model_path = root / 'model.pkl'
-        vectorizer_path = root / 'vectorizer.pkl'
-        label_encoder_path = root / 'label_encoder.pkl'
-        
+
+        model_path = root / 'app/ml_models/model.pkl'
+        vectorizer_path = root / 'app/ml_models/vectorizer.pkl'
+        label_encoder_path = root / 'app/ml_models/label_encoder.pkl'
+
+        print("MODEL PATH:", model_path)
+        print("EXISTS:", model_path.exists())
+
         if not model_path.exists():
             return None, None, None
-        
+
         with open(model_path, 'rb') as f:
             _model_cache = pickle.load(f)
-        
+            print("MODEL LOADED OK")
+
         with open(vectorizer_path, 'rb') as f:
             _vectorizer_cache = pickle.load(f)
-        
+            print("VECTORIZER LOADED OK")
+
         with open(label_encoder_path, 'rb') as f:
             _label_encoder_cache = pickle.load(f)
-        
+            print("LABEL ENCODER LOADED OK")
+
         _model_loaded = True
+        print("MODEL PATH:", model_path)
+        print("VECTOR PATH:", vectorizer_path)
+        print("LABEL PATH:", label_encoder_path)
+
+        print("MODEL EXISTS:", model_path.exists())
+        print("VECTOR EXISTS:", vectorizer_path.exists())
+        print("LABEL EXISTS:", label_encoder_path.exists())
         return _model_cache, _vectorizer_cache, _label_encoder_cache
+
     except Exception as e:
         print(f"Error loading ML model: {str(e)}")
         return None, None, None

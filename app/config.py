@@ -49,7 +49,9 @@ def _env_bool(name, default):
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "tickethub-secret-key")
 
-    SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI", "mysql+pymysql://root:123456@localhost/ticketdb")
+    SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI", 
+                                        "mysql+pymysql://root:123456@localhost/ticketdb"
+                                        )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DB_AUTO_INIT = _env_bool("DB_AUTO_INIT", True)
 
@@ -65,9 +67,15 @@ class Config:
 
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-    GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://127.0.0.1:5000/callback")
+    GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "https://nonvinous-walker-postpositively.ngrok-free.dev/callback")
     GOOGLE_DISCOVERY_URL = os.getenv(
         "GOOGLE_DISCOVERY_URL",
         "https://accounts.google.com/.well-known/openid-configuration",
     )
     QR_SECRET = os.getenv("QR_SECRET", "your-qr-secret-key-change-this")
+
+    VNP_TMNCODE = os.getenv("VNP_TMNCODE", "YOUR_TMNCODE")
+    VNP_HASHSECRET = os.getenv("VNP_HASHSECRET", "YOUR_SECRET_KEY")
+    VNP_URL = os.getenv("VNP_URL", "")
+    VNP_RETURN_URL = os.getenv("VNP_RETURN_URL", "")
+    VNP_API_URL = os.getenv("VNP_API_URL", "")

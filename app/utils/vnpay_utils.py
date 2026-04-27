@@ -1,6 +1,5 @@
 import hashlib
 import hmac
-import os
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import datetime, timedelta
 from typing import Any, Dict, Mapping
@@ -8,13 +7,15 @@ from urllib.parse import quote_plus
 
 from flask import has_app_context, current_app
 import requests
+from app.config import Config
+from zoneinfo import ZoneInfo
 
-# VNPay sandbox defaults for local simulation.
-VNP_TMNCODE = "YOUR_TMNCODE"
-VNP_HASHSECRET = "YOUR_SECRET_KEY"
-VNP_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
-VNP_RETURN_URL = "http://127.0.0.1:5000/payment_return"
-VNP_API_URL = "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction"
+# VNPay defaults are resolved from Flask config.
+VNP_TMNCODE = Config.VNP_TMNCODE
+VNP_HASHSECRET = Config.VNP_HASHSECRET
+VNP_URL = Config.VNP_URL
+VNP_RETURN_URL = Config.VNP_RETURN_URL
+VNP_API_URL = Config.VNP_API_URL
 
 
 RESPONSE_MESSAGES = {
@@ -33,12 +34,15 @@ RESPONSE_MESSAGES = {
 	"99": "Loi khong xac dinh",
 }
 
+VNPAY_TIMEZONE = ZoneInfo("Asia/Ho_Chi_Minh")
+def _now_vnpay() -> datetime:
+    return datetime.now(VNPAY_TIMEZONE).replace(tzinfo=None)
 
 def _load_setting(name: str, default: str) -> str:
 	if has_app_context():
-		value = current_app.config.get(name) or os.getenv(name)
+		value = current_app.config.get(name)
 	else:
-		value = os.getenv(name)
+		value = None
 
 	value = (value or "").strip()
 	return value if value else default
@@ -101,7 +105,7 @@ def build_payment_url(
 	expire_minutes: int = 15,
 ) -> Dict[str, Any]:
 	config = get_vnpay_config()
-	created_at = create_date or datetime.now()
+	created_at = create_date or _now_vnpay()
 	resolved_return_url = (return_url or "").strip() or config["vnp_return_url"]
 
 	params: Dict[str, Any] = {
@@ -180,7 +184,7 @@ def build_refund_payload(
 	request_id: str | None = None,
 ) -> Dict[str, str]:
 	config = get_vnpay_config()
-	created_at = create_date or datetime.now()
+	created_at = create_date or _now_vnpay()
 	resolved_request_id = (request_id or f"RF{created_at.strftime('%Y%m%d%H%M%S%f')}")[:32]
 	resolved_order_info = (order_info or "Hoan tien giao dich")[:255]
 
@@ -334,14 +338,15 @@ def request_refund(
 def build_mock_return_url(txn_ref: str, amount: float | int, success: bool = True) -> str:
 	response_code = "00" if success else "24"
 	transaction_status = "00" if success else "02"
+	created_at = _now_vnpay()
 
 	params = {
 		"vnp_Amount": str(int(round(float(amount) * 100))),
 		"vnp_TxnRef": str(txn_ref),
 		"vnp_ResponseCode": response_code,
 		"vnp_TransactionStatus": transaction_status,
-		"vnp_TransactionNo": f"MOCK{datetime.now().strftime('%Y%m%d%H%M%S')}",
-		"vnp_PayDate": datetime.now().strftime("%Y%m%d%H%M%S"),
+		"vnp_TransactionNo": f"MOCK{created_at.strftime('%Y%m%d%H%M%S')}",
+        "vnp_PayDate": created_at.strftime("%Y%m%d%H%M%S"),
 		"vnp_OrderInfo": "Mock payment callback",
 	}
 
@@ -350,4 +355,3 @@ def build_mock_return_url(txn_ref: str, amount: float | int, success: bool = Tru
 
 	return_url = get_vnpay_config()["vnp_return_url"]
 	return f"{return_url}?{query}&vnp_SecureHash={secure_hash}"
-

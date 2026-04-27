@@ -14,8 +14,8 @@ cloudinary==1.41.0
 
 # ML & Data
 joblib
-scikit-learn==1.2.2
-numpy==1.24.3
+scikit-learn
+numpy
 
 # Utilities
 # pytest==9.0.3
