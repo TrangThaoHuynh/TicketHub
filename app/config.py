@@ -1,10 +1,16 @@
 import os
+FACE_SERVICE_URL = os.getenv(
+    "FACE_SERVICE_URL",
+    "http://localhost:5001"  # Default cho development
+)
+
+
+# Timeout cho request (seconds)
+FACE_SERVICE_TIMEOUT = int(os.getenv("FACE_SERVICE_TIMEOUT", "30"))
 
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 ENV_FILE_PATH = os.path.join(BASE_DIR, ".env")
-FACE_MODEL_NAME = "Facenet512"
-FACE_DETECTOR_BACKEND = "opencv"
 FACE_MATCH_THRESHOLD = 0.35
 
 def _load_dotenv(path):

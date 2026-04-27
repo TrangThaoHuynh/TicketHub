@@ -1,7 +1,7 @@
 import re
 import secrets
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from io import BytesIO
 
@@ -31,7 +31,7 @@ CHECKOUT_PHONE_PATTERN = re.compile(r"^(0\d{9,10}|\+84\d{9,10})$")
 
 def _utcnow_naive() -> datetime:
 	# Preserve legacy naive-UTC behavior without relying on deprecated utcnow().
-	return datetime.now(UTC).replace(tzinfo=None)
+	return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _parse_positive_int(value):

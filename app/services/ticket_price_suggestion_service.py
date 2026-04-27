@@ -6,7 +6,6 @@ from datetime import datetime
 from typing import Any
 
 import joblib
-import pandas as pd
 
 
 @dataclass(frozen=True)
@@ -164,8 +163,10 @@ class TicketPriceSuggester:
             for col in all_cols:
                 row.setdefault(col, None)
 
-            df = pd.DataFrame([row], columns=all_cols)
-            y_pred = pipeline.predict(df)
+            # Convert dict -> list đúng thứ tự columns
+            X = [[row.get(col) for col in all_cols]]
+            y_pred = pipeline.predict(X)
+
             value = float(y_pred[0]) if hasattr(y_pred, "__len__") else float(y_pred)
             return TicketPriceSuggestion(suggested_price=_round_vnd(value), source="ml")
         except Exception:
