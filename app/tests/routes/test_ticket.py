@@ -485,7 +485,7 @@ def test_payment_return_success_updates_booking_and_ticket_status(app, client):
 	}
 
 	with patch("app.routes.ticket_routes.verify_return_data", return_value=verify_payload), patch(
-		"app.routes.ticket_routes.send_ticket_email_by_booking"
+		"app.routes.ticket_routes._send_ticket_email_async"
 	) as mock_send_email:
 		response = client.get("/payment_return")
 

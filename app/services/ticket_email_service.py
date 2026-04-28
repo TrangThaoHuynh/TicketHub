@@ -1,4 +1,4 @@
-from flask import render_template
+from flask import current_app, render_template
 from flask_mail import Message
 
 from .. import mail
@@ -15,6 +15,13 @@ def _format_money(amount):
         return f"{int(amount):,}".replace(",", ".")
     except Exception:
         return str(amount)
+
+
+def _resolve_mail_sender() -> str:
+    sender = current_app.config.get("MAIL_DEFAULT_SENDER") or current_app.config.get("MAIL_USERNAME")
+    if not sender:
+        raise RuntimeError("MAIL_DEFAULT_SENDER or MAIL_USERNAME is not configured")
+    return sender
 
 
 def send_ticket_email_by_booking(booking_id: int):
@@ -44,7 +51,8 @@ def send_ticket_email_by_booking(booking_id: int):
 
     msg = Message(
         subject=f"[TicketHub] Vé điện tử cho đơn hàng #{booking.id}",
-        recipients=[customer.email]
+        recipients=[customer.email],
+        sender=_resolve_mail_sender(),
     )
 
     ticket_items = []

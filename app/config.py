@@ -65,7 +65,7 @@ class Config:
     MAIL_TIMEOUT = int(os.getenv("MAIL_TIMEOUT", "10"))
     # Default "From" address for all outgoing emails.
     # Can be overridden via MAIL_DEFAULT_SENDER in .env.
-    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "tickethub@gmail.com")
+    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER") or MAIL_USERNAME or "tickethub@gmail.com"
 
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
