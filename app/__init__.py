@@ -11,7 +11,7 @@ from .config import Config
 from flask import session
 
 # Load biến môi trường
-load_dotenv()
+load_dotenv(override=True)
 
 # Configure Cloudinary
 cloudinary_url = os.getenv("CLOUDINARY_URL")

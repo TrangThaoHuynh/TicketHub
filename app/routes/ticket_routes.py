@@ -1,7 +1,7 @@
 import re
 import secrets
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from io import BytesIO
 
@@ -22,7 +22,7 @@ from ..services.ticket_email_service import send_ticket_email_by_booking
 from ..services.ticket_service import count_sold_by_ticket_type, get_ticket_types_by_event_id
 from ..services.face_service import extract_face_embedding_from_base64
 from ..utils.qr_utils import sign_payload
-from ..utils.vnpay_utils import build_payment_url, request_refund, verify_return_data
+from ..utils.vnpay_utils import build_payment_url, get_vnpay_config, request_refund, verify_return_data
 from .event_routes import event_bp
 
 
@@ -31,7 +31,7 @@ CHECKOUT_PHONE_PATTERN = re.compile(r"^(0\d{9,10}|\+84\d{9,10})$")
 
 def _utcnow_naive() -> datetime:
 	# Preserve legacy naive-UTC behavior without relying on deprecated utcnow().
-	return datetime.now(timezone.utc).replace(tzinfo=None)
+	return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _parse_positive_int(value):
@@ -56,9 +56,9 @@ def _request_client_ip():
 
 
 def _payment_return_url():
-	configured_url = (current_app.config.get("VNP_RETURN_URL") or "").strip()
-	if configured_url:
-		return configured_url
+	config_return_url = (get_vnpay_config().get("vnp_return_url") or "").strip()
+	if config_return_url:
+		return config_return_url
 
 	return url_for("event.payment_return", _external=True)
 
@@ -326,25 +326,13 @@ def checkout_event_tickets(event_id: int):
 	if (event.status or "").strip().upper() != "PUBLISHED":
 		return jsonify({"ok": False, "message": "Sự kiện hiện không mở bán vé."}), 400
 
-	require_face = bool(event.hasFaceReg)
 	payload = request.get_json(silent=True) or {}
 	checkout_tickets, parse_error = _parse_checkout_tickets(
 		payload.get("tickets"),
-		require_face=require_face,
+		require_face=bool(event.hasFaceReg),
 	)
 	if parse_error:
 		return jsonify({"ok": False, "message": parse_error}), 400
-
-	event_limit_quantity = _parse_positive_int(getattr(event, "limitQuantity", None))
-	if event_limit_quantity is not None:
-		total_requested_quantity = sum(item["quantity"] for item in checkout_tickets)
-		if total_requested_quantity > event_limit_quantity:
-			return jsonify(
-				{
-					"ok": False,
-					"message": f"Sự kiện này chỉ cho mua {event_limit_quantity} vé.",
-				}
-			), 400
 
 	ticket_type_ids = [item["ticketTypeId"] for item in checkout_tickets]
 	unique_ticket_type_ids = list(set(ticket_type_ids))
@@ -422,7 +410,7 @@ def checkout_event_tickets(event_id: int):
 			for holder in selected_ticket["holders"]:
 				face_embedding = None
 
-				if require_face:
+				if event.hasFaceReg:
 					try:
 						face_embedding = extract_face_embedding_from_base64(holder.get("faceImageBase64"))
 					except ValueError as exc:
@@ -449,7 +437,7 @@ def checkout_event_tickets(event_id: int):
 					customerId=user_id,
 				)
 
-				if not require_face:
+				if event.hasFaceReg is False:
 					qr_url, qr_error = _create_and_upload_qr_url(ticket=ticket, event_id=event.id)
 					if qr_error:
 						raise RuntimeError(qr_error)
@@ -492,7 +480,10 @@ def checkout_event_tickets(event_id: int):
 
 @event_bp.route("/payment_return")
 def payment_return():
-	verify_result = verify_return_data(request.args.to_dict(flat=False))
+	verify_result = verify_return_data(
+		request.args.to_dict(flat=False),
+		raw_query=request.query_string,
+	)
 	booking_id = _extract_booking_id_from_txn_ref(verify_result.get("txn_ref"))
 
 	if booking_id is None:

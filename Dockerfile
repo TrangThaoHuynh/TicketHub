@@ -1,5 +1,5 @@
 # ===== BUILD STAGE =====
-FROM python:3.10-slim AS builder
+FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
@@ -13,12 +13,12 @@ RUN pip install --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements-main.txt
 
 # ===== RUNTIME STAGE =====
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
 # Copy thư viện đã cài từ builder
-COPY --from=builder /usr/local/lib/python3.10 /usr/local/lib/python3.10
+COPY --from=builder /usr/local/lib/python3.11 /usr/local/lib/python3.11
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy source code
