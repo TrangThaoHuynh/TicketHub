@@ -52,6 +52,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI", 
                                         "mysql+pymysql://root:123456@localhost/ticketdb"
                                         )
+    
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DB_AUTO_INIT = _env_bool("DB_AUTO_INIT", True)
 
@@ -79,3 +80,8 @@ class Config:
     VNP_URL = os.getenv("VNP_URL", "")
     VNP_RETURN_URL = os.getenv("VNP_RETURN_URL", "")
     VNP_API_URL = os.getenv("VNP_API_URL", "")
+
+    SESSION_COOKIE_SECURE = True  # Chỉ gửi qua HTTPS
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'  
+    PERMANENT_SESSION_LIFETIME = 1800 

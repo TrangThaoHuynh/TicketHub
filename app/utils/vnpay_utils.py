@@ -3,7 +3,8 @@ import hmac
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import datetime, timedelta
 from typing import Any, Dict, Mapping
-from urllib.parse import quote_plus
+# from urllib.parse import quote_plus
+from urllib.parse import quote
 
 from flask import has_app_context, current_app
 import requests
@@ -81,8 +82,7 @@ def _build_hash_data(params: Mapping[str, Any]) -> str:
 	}
 
 	sorted_items = sorted(filtered.items(), key=lambda item: item[0])
-	return "&".join(f"{key}={quote_plus(value)}" for key, value in sorted_items)
-
+	return "&".join(f"{key}={quote(value, safe='')}" for key, value in sorted_items)
 
 def create_secure_hash(params: Mapping[str, Any], hash_secret: str | None = None) -> str:
 	config = get_vnpay_config()
@@ -129,10 +129,12 @@ def build_payment_url(
 
 	query_without_hash = _build_hash_data(params)
 	secure_hash = create_secure_hash(params, config["vnp_hash_secret"])
-	payment_url = f"{config['vnp_url']}?{query_without_hash}&vnp_SecureHash={secure_hash}"
+	query_with_hash_type = f"{query_without_hash}&vnp_SecureHashType=SHA512"
+	payment_url = f"{config['vnp_url']}?{query_with_hash_type}&vnp_SecureHash={secure_hash}"
 
 	signed_params = dict(_normalize_params(params))
 	signed_params["vnp_SecureHash"] = secure_hash
+	signed_params["vnp_SecureHashType"] = "SHA512"
 
 	return {
 		"payment_url": payment_url,
@@ -352,6 +354,7 @@ def build_mock_return_url(txn_ref: str, amount: float | int, success: bool = Tru
 
 	secure_hash = create_secure_hash(params)
 	query = _build_hash_data(params)
+	query_with_hash_type = f"{query}&vnp_SecureHashType=SHA512"
 
 	return_url = get_vnpay_config()["vnp_return_url"]
-	return f"{return_url}?{query}&vnp_SecureHash={secure_hash}"
+	return f"{return_url}?{query_with_hash_type}&vnp_SecureHash={secure_hash}"
