@@ -4,6 +4,7 @@ import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 from io import BytesIO
+from threading import Thread
 
 from flask import abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 import qrcode
@@ -61,6 +62,21 @@ def _payment_return_url():
 		return config_return_url
 
 	return url_for("event.payment_return", _external=True)
+
+
+def _send_ticket_email_async(booking_id: int) -> None:
+	app = current_app._get_current_object()
+
+	def _task():
+		with app.app_context():
+			try:
+				send_ticket_email_by_booking(booking_id)
+			except Exception:
+				app.logger.exception("Failed to send ticket email by booking")
+			finally:
+				db.session.remove()
+
+	Thread(target=_task, daemon=True).start()
 
 
 def _build_vnpay_txn_ref(booking_id: int) -> str:
@@ -564,10 +580,7 @@ def payment_return():
 
 			flash("Thanh toán thành công.", "success")
 			if send_success_email:
-				try:
-					send_ticket_email_by_booking(booking.id)
-				except Exception:
-					current_app.logger.exception("Failed to send ticket email by booking")
+				_send_ticket_email_async(booking.id)
 
 			return redirect(my_tickets_url)
 
