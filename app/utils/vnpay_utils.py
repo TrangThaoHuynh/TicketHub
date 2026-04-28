@@ -3,8 +3,8 @@ import hmac
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import datetime, timedelta
 from typing import Any, Dict, Mapping
-# from urllib.parse import quote_plus
-from urllib.parse import quote
+from urllib.parse import quote_plus
+
 
 from flask import has_app_context, current_app
 import requests
@@ -82,14 +82,25 @@ def _build_hash_data(params: Mapping[str, Any]) -> str:
 	}
 
 	sorted_items = sorted(filtered.items(), key=lambda item: item[0])
-	return "&".join(f"{key}={quote(value, safe='')}" for key, value in sorted_items)
+	return "&".join(f"{key}={quote_plus(value)}" for key, value in sorted_items)
 
 def create_secure_hash(params: Mapping[str, Any], hash_secret: str | None = None) -> str:
 	config = get_vnpay_config()
 	secret = (hash_secret or config["vnp_hash_secret"]).strip()
 	hash_data = _build_hash_data(params)
 
-	return hmac.new(secret.encode("utf-8"), hash_data.encode("utf-8"), hashlib.sha512).hexdigest()
+	expected_hash = hmac.new(
+        secret.encode("utf-8"),
+        hash_data.encode("utf-8"),
+        hashlib.sha512,
+    ).hexdigest()
+
+	if has_app_context():
+		current_app.logger.info("[VNPAY] build hash_data=%s", hash_data)
+	else:
+		print(f"[VNPAY] build hash_data={hash_data}")
+
+	return expected_hash
 
 
 def build_payment_url(
