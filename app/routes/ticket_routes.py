@@ -56,6 +56,10 @@ def _request_client_ip():
 
 
 def _payment_return_url():
+	configured_url = (current_app.config.get("VNP_RETURN_URL") or "").strip()
+	if configured_url:
+		return configured_url
+
 	return url_for("event.payment_return", _external=True)
 
 
