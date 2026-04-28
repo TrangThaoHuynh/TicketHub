@@ -43,6 +43,19 @@ def _load_setting(name: str, default: str) -> str:
 	value = (value or "").strip()
 	return value if value else default
 
+def _load_int_setting(name: str, default: int) -> int:
+    raw = _load_setting(name, str(default))
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return default
+
+
+def _vnpay_now() -> datetime:
+    # VNPay expects timestamps in GMT+7 (Asia/Ho_Chi_Minh).
+    # Allow manual offset in minutes to compensate for clock drift if needed.
+    minute_offset = _load_int_setting("VNP_TIME_OFFSET_MINUTES", 0)
+    return datetime.utcnow() + timedelta(hours=7, minutes=minute_offset)
 
 def get_vnpay_config() -> Dict[str, str]:
 	return {
@@ -122,8 +135,12 @@ def build_payment_url(
 	expire_minutes: int = 15,
 ) -> Dict[str, Any]:
 	config = get_vnpay_config()
-	created_at = create_date or datetime.now()
+	created_at = create_date or _vnpay_now()
 	resolved_return_url = (return_url or "").strip() or config["vnp_return_url"]
+	resolved_expire_minutes = _load_int_setting("VNP_EXPIRE_MINUTES", int(expire_minutes or 15))
+	if resolved_expire_minutes < 1:
+		resolved_expire_minutes = 15
+	
 
 	params: Dict[str, Any] = {
 		"vnp_Version": "2.1.0",
@@ -138,7 +155,7 @@ def build_payment_url(
 		"vnp_ReturnUrl": resolved_return_url,
 		"vnp_IpAddr": ip_addr,
 		"vnp_CreateDate": created_at.strftime("%Y%m%d%H%M%S"),
-		"vnp_ExpireDate": (created_at + timedelta(minutes=expire_minutes)).strftime("%Y%m%d%H%M%S"),
+		"vnp_ExpireDate": (created_at + timedelta(minutes=resolved_expire_minutes)).strftime("%Y%m%d%H%M%S"),
 	}
 
 	if bank_code:
@@ -148,9 +165,15 @@ def build_payment_url(
 	secure_hash = create_secure_hash(params, config["vnp_hash_secret"])
 
 	if has_app_context():
+		current_app.logger.info(
+            "VNPay create_date=%s expire_date=%s",
+            params["vnp_CreateDate"],
+            params["vnp_ExpireDate"],
+        )
 		current_app.logger.info("VNPay hash_data=%s", hash_data)
 		current_app.logger.info("VNPay secure_hash=%s", secure_hash)
 	else:
+		print(f"VNPay create_date={params['vnp_CreateDate']} expire_date={params['vnp_ExpireDate']}")
 		print(f"VNPay hash_data={hash_data}")
 		print(f"VNPay secure_hash={secure_hash}")
 
