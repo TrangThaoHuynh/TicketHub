@@ -1,5 +1,21 @@
+import base64
+import os
+
 from flask import current_app, render_template
 from flask_mail import Message
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import (
+    Attachment,
+    Content,
+    ContentId,
+    Disposition,
+    Email,
+    FileContent,
+    FileName,
+    FileType,
+    Mail as SendGridMail,
+    To,
+)
 
 from .. import mail
 from ..models.booking import Booking
@@ -24,7 +40,18 @@ def _resolve_mail_sender() -> str:
     return sender
 
 
-def send_ticket_email_by_booking(booking_id: int):
+def _resolve_sendgrid_sender() -> str:
+    sender = current_app.config.get("SENDGRID_FROM_EMAIL") or os.getenv("SENDGRID_FROM_EMAIL")
+    if sender:
+        return sender
+    return _resolve_mail_sender()
+
+
+def _get_sendgrid_api_key() -> str | None:
+    return current_app.config.get("SENDGRID_API_KEY") or os.getenv("SENDGRID_API_KEY")
+
+
+def _build_ticket_email_payload(booking_id: int):
     booking = Booking.query.get(booking_id)
     if not booking:
         raise ValueError("Không tìm thấy booking")
@@ -49,13 +76,11 @@ def send_ticket_email_by_booking(booking_id: int):
 
     payment = booking.payments[0] if booking.payments else None
 
-    msg = Message(
-        subject=f"[TicketHub] Vé điện tử cho đơn hàng #{booking.id}",
-        recipients=[customer.email],
-        sender=_resolve_mail_sender(),
-    )
+    subject = f"[TicketHub] Vé điện tử cho đơn hàng #{booking.id}"
+    recipient = customer.email
 
     ticket_items = []
+    inline_attachments = []
 
     for idx, ticket in enumerate(tickets):
         ticket_type = TicketType.query.get(ticket.ticketTypeId)
@@ -71,12 +96,13 @@ def send_ticket_email_by_booking(booking_id: int):
             qr_png = build_ticket_qr_png(ticket)
             cid = f"ticket_qr_{idx}"
 
-            msg.attach(
-                filename=f"{ticket.ticketCode or ticket.id}.png",
-                content_type="image/png",
-                data=qr_png,
-                disposition="inline",
-                headers={"Content-ID": f"<{cid}>"}
+            inline_attachments.append(
+                {
+                    "filename": f"{ticket.ticketCode or ticket.id}.png",
+                    "content_type": "image/png",
+                    "data": qr_png,
+                    "content_id": cid,
+                }
             )
 
         ticket_items.append({
@@ -96,7 +122,7 @@ def send_ticket_email_by_booking(booking_id: int):
     if not ticket_items:
         raise ValueError("Không có dữ liệu vé hợp lệ để gửi mail")
 
-    msg.html = render_template(
+    html = render_template(
         "ticket_email.html",
         customer_name=customer.name or "Khách hàng",
         booking_id=booking.id,
@@ -105,6 +131,64 @@ def send_ticket_email_by_booking(booking_id: int):
         transaction_id=payment.transactionID if payment else "",
         tickets=ticket_items
     )
+    return subject, recipient, html, inline_attachments
 
+
+def _send_ticket_email_smtp(subject: str, recipient: str, html: str, attachments):
+    msg = Message(
+        subject=subject,
+        recipients=[recipient],
+        sender=_resolve_mail_sender(),
+    )
+
+    for attachment in attachments:
+        msg.attach(
+            filename=attachment["filename"],
+            content_type=attachment["content_type"],
+            data=attachment["data"],
+            disposition="inline",
+            headers={"Content-ID": f"<{attachment['content_id']}>"},
+        )
+
+    msg.html = html
     mail.send(msg)
+
+
+def _send_ticket_email_sendgrid(subject: str, recipient: str, html: str, attachments):
+    api_key = _get_sendgrid_api_key()
+    if not api_key:
+        raise RuntimeError("SENDGRID_API_KEY is not configured")
+
+    message = SendGridMail(
+        from_email=Email(_resolve_sendgrid_sender()),
+        to_emails=To(recipient),
+        subject=subject,
+        html_content=Content("text/html", html),
+    )
+
+    for attachment in attachments:
+        encoded = base64.b64encode(attachment["data"]).decode("ascii")
+        message.add_attachment(
+            Attachment(
+                FileContent(encoded),
+                FileName(attachment["filename"]),
+                FileType(attachment["content_type"]),
+                Disposition("inline"),
+                ContentId(attachment["content_id"]),
+            )
+        )
+
+    client = SendGridAPIClient(api_key)
+    response = client.send(message)
+    if response.status_code >= 400:
+        raise RuntimeError(f"SendGrid send failed: {response.status_code}")
+
+
+def send_ticket_email_by_booking(booking_id: int):
+    subject, recipient, html, attachments = _build_ticket_email_payload(booking_id)
+    if _get_sendgrid_api_key():
+        _send_ticket_email_sendgrid(subject, recipient, html, attachments)
+    else:
+        _send_ticket_email_smtp(subject, recipient, html, attachments)
+
     return True
