@@ -1,10 +1,40 @@
 from __future__ import annotations
 
-from flask import render_template
-from flask_mail import Message
+import os
 
-from .. import mail
+from flask import current_app, render_template
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Content, Email, Mail as SendGridMail, To
+
 from ..models.user import User
+
+def _resolve_sendgrid_sender() -> str:
+    sender = current_app.config.get("SENDGRID_FROM_EMAIL") or os.getenv("SENDGRID_FROM_EMAIL")
+    if not sender:
+        raise RuntimeError("SENDGRID_FROM_EMAIL is not configured")
+    return sender
+
+
+def _get_sendgrid_api_key() -> str | None:
+    return current_app.config.get("SENDGRID_API_KEY") or os.getenv("SENDGRID_API_KEY")
+
+
+def _send_organizer_status_email_sendgrid(subject: str, recipient: str, html: str) -> None:
+    api_key = _get_sendgrid_api_key()
+    if not api_key:
+        raise RuntimeError("SENDGRID_API_KEY is not configured")
+
+    message = SendGridMail(
+        from_email=Email(_resolve_sendgrid_sender()),
+        to_emails=To(recipient),
+        subject=subject,
+        html_content=Content("text/html", html),
+    )
+
+    client = SendGridAPIClient(api_key)
+    response = client.send(message)
+    if response.status_code >= 400:
+        raise RuntimeError(f"SendGrid send failed: {response.status_code}")
 
 
 def send_organizer_status_email(*, organizer_user: User, new_status: str) -> bool:
@@ -31,12 +61,12 @@ def send_organizer_status_email(*, organizer_user: User, new_status: str) -> boo
         or "Nhà tổ chức"
     )
 
-    msg = Message(subject=subject, recipients=[recipient])
-    msg.html = render_template(
+    html = render_template(
         "organizer_approval_email.html",
         organizer_name=organizer_name,
         new_status=status,
     )
 
-    mail.send(msg)
+    _send_organizer_status_email_sendgrid(subject, recipient, html)
+
     return True
