@@ -1,4 +1,4 @@
-import smtplib
+import os
 from urllib.parse import urlparse
 
 from flask import (
@@ -12,9 +12,11 @@ from flask import (
     session,
     url_for,
 )
-from flask_mail import Message
 from flask_login import login_user, logout_user
-from .. import db, mail, oauth
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Content, Email, Mail as SendGridMail, To
+
+from .. import db, oauth
 from ..services.cloudinary_service import cloudinary_service
 from ..services import (
     assign_user_role,
@@ -59,23 +61,6 @@ def _json_success(message, **extra):
     return jsonify(payload)
 
 
-def _build_smtp_auth_error_message(exc):
-    smtp_code = getattr(exc, 'smtp_code', None)
-    smtp_error = getattr(exc, 'smtp_error', b'')
-    if isinstance(smtp_error, bytes):
-        smtp_error = smtp_error.decode('utf-8', errors='ignore').strip()
-    else:
-        smtp_error = str(smtp_error).strip()
-
-    message = 'Sai MAIL_USERNAME hoac MAIL_PASSWORD SMTP (hoac chua dung App Password).'
-    if smtp_code:
-        message = f'{message} SMTP code: {smtp_code}.'
-    if current_app.debug and smtp_error:
-        message = f'{message} Detail: {smtp_error}'
-
-    return message
-
-
 def _safe_next_path(next_value: str | None) -> str | None:
     if not next_value:
         return None
@@ -110,49 +95,48 @@ def _get_organizer_login_notice(user_id: int | None) -> str | None:
     return None
 
 
-def _validate_mail_settings():
+def _validate_sendgrid_settings():
     def _is_placeholder(value):
         text = (value or "").strip().lower()
         if not text:
             return False
         return text.startswith("your_") or "example" in text
 
-    mail_server = (current_app.config.get('MAIL_SERVER') or '').strip()
-    mail_port = current_app.config.get('MAIL_PORT')
-    mail_username = (current_app.config.get('MAIL_USERNAME') or '').strip()
-    mail_password = current_app.config.get('MAIL_PASSWORD') or ''
-    default_sender = (current_app.config.get('MAIL_DEFAULT_SENDER') or '').strip()
+    api_key = (current_app.config.get('SENDGRID_API_KEY') or os.getenv('SENDGRID_API_KEY') or '').strip()
+    from_email = (current_app.config.get('SENDGRID_FROM_EMAIL') or os.getenv('SENDGRID_FROM_EMAIL') or '').strip()
 
-    if not mail_server or not mail_port:
-        return 'Chua cau hinh MAIL_SERVER hoac MAIL_PORT.'
+    if not api_key:
+        return 'Chua cau hinh SENDGRID_API_KEY.'
+    if _is_placeholder(api_key):
+        return 'Ban dang dung gia tri mau trong .env. Hay cap nhat SENDGRID_API_KEY.'
 
-    if not default_sender and mail_username:
-        default_sender = mail_username
-        current_app.config['MAIL_DEFAULT_SENDER'] = default_sender
-
-    if _is_placeholder(mail_username) or _is_placeholder(mail_password) or _is_placeholder(default_sender):
-        return 'Ban dang dung gia tri mau trong .env. Hay cap nhat MAIL_USERNAME, MAIL_PASSWORD va MAIL_DEFAULT_SENDER bang thong tin that.'
-
-    if 'gmail' in mail_server.lower() and (not mail_username or not mail_password):
-        return 'Chua cau hinh MAIL_USERNAME/MAIL_PASSWORD cho Gmail SMTP (nen dung App Password).'
-
-    if bool(mail_username) != bool(mail_password):
-        return 'Can cau hinh day du ca MAIL_USERNAME va MAIL_PASSWORD.'
-
-    if current_app.config.get('MAIL_USE_TLS') and current_app.config.get('MAIL_USE_SSL'):
-        return 'Khong the bat dong thoi MAIL_USE_TLS va MAIL_USE_SSL.'
-
-    if 'gmail' in mail_server.lower() and mail_password:
-        normalized_password = ''.join(str(mail_password).split())
-        if len(normalized_password) != 16:
-            return 'MAIL_PASSWORD Gmail phai la App Password gom dung 16 ky tu (co the bo khoang trang).'
-        if normalized_password != str(mail_password):
-            current_app.config['MAIL_PASSWORD'] = normalized_password
-
-    if not default_sender:
-        return 'Chua cau hinh MAIL_DEFAULT_SENDER (hoac MAIL_USERNAME).'
+    if not from_email:
+        return 'Chua cau hinh SENDGRID_FROM_EMAIL.'
+    if _is_placeholder(from_email):
+        return 'Ban dang dung gia tri mau trong .env. Hay cap nhat SENDGRID_FROM_EMAIL.'
+    if '@' not in from_email:
+        return 'SENDGRID_FROM_EMAIL khong hop le.'
 
     return None
+
+
+def _send_forgot_password_email_sendgrid(subject: str, recipient: str, body: str) -> None:
+    api_key = current_app.config.get('SENDGRID_API_KEY') or os.getenv('SENDGRID_API_KEY')
+    from_email = current_app.config.get('SENDGRID_FROM_EMAIL') or os.getenv('SENDGRID_FROM_EMAIL')
+    if not api_key or not from_email:
+        raise RuntimeError('SendGrid is not configured')
+
+    message = SendGridMail(
+        from_email=Email(from_email),
+        to_emails=To(recipient),
+        subject=subject,
+        plain_text_content=Content('text/plain', body),
+    )
+
+    client = SendGridAPIClient(api_key)
+    response = client.send(message)
+    if response.status_code >= 400:
+        raise RuntimeError(f'SendGrid send failed: {response.status_code}')
 
 
 def _validate_google_settings():
@@ -399,33 +383,24 @@ def request_forgot_password_code():
     payload = _request_payload()
     email = (payload.get('email') or '').strip()
 
-    mail_error = _validate_mail_settings()
-    if mail_error:
-        return _json_error(mail_error, 500)
+    sendgrid_error = _validate_sendgrid_settings()
+    if sendgrid_error:
+        return _json_error(sendgrid_error, 500)
 
     user, code, error = issue_verify_code(email)
     if error:
         return _json_error(error, 400)
 
     try:
-        mail.send(
-            Message(
-                subject=FORGOT_PASSWORD_SUBJECT,
-                recipients=[user.email],
-                sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
-                body=(
-                    f'Xin chào {user.name or user.username},\n\n'
-                    f'Mã xác nhận của bạn là: {code}\n\n'
-                    'Nhập mã này để xác nhận yêu cầu đổi mật khẩu.'
-                ),
-            )
+        _send_forgot_password_email_sendgrid(
+            FORGOT_PASSWORD_SUBJECT,
+            user.email,
+            (
+                f'Xin chào {user.name or user.username},\n\n'
+                f'Mã xác nhận của bạn là: {code}\n\n'
+                'Nhập mã này để xác nhận yêu cầu đổi mật khẩu.'
+            ),
         )
-    except smtplib.SMTPAuthenticationError as exc:
-        clear_verify_code(user.id)
-        return _json_error(_build_smtp_auth_error_message(exc), 500)
-    except (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected):
-        clear_verify_code(user.id)
-        return _json_error('Không kết nối được máy chủ SMTP. Vui lòng kiểm tra MAIL_SERVER/MAIL_PORT.', 500)
     except Exception as exc:
         clear_verify_code(user.id)
 
