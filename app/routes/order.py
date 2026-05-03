@@ -5,6 +5,7 @@ from flask_login import login_required, current_user
 from io import BytesIO
 import uuid
 from sqlalchemy import func, case
+from sqlalchemy.orm import aliased
 from sqlalchemy.exc import ProgrammingError
 
 from .. import db
