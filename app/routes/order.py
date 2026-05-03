@@ -116,6 +116,17 @@ def my_tickets():
     try:
         total_amount_expr = func.coalesce(Booking.totalAmount, func.sum(Ticket.price))
 
+        # Lấy trạng thái thanh toán của lần thanh toán mới nhất (theo Payment.id lớn nhất)
+        latest_payment_id_subq = (
+            db.session.query(
+                Payment.bookingId.label("booking_id"),
+                func.max(Payment.id).label("max_payment_id"),
+            )
+            .group_by(Payment.bookingId)
+            .subquery()
+        )
+        LatestPayment = aliased(Payment)
+
         query = (
             db.session.query(
                 Booking.id.label('booking_id'),
@@ -137,7 +148,8 @@ def my_tickets():
             .join(Ticket, Ticket.bookingId == Booking.id)
             .join(TicketType, TicketType.id == Ticket.ticketTypeId)
             .join(Event, Event.id == TicketType.eventId)
-            .outerjoin(Payment, Payment.bookingId == Booking.id)
+            .outerjoin(latest_payment_id_subq, latest_payment_id_subq.c.booking_id == Booking.id)
+            .outerjoin(LatestPayment, LatestPayment.id == latest_payment_id_subq.c.max_payment_id)
             .filter(Booking.customerId == current_user.id)
             .group_by(
                 Booking.id,
@@ -147,6 +159,7 @@ def my_tickets():
                 Event.id,
                 Event.title,
                 Event.image,
+                LatestPayment.status,
             )
             .order_by(Booking.createdAt.desc(), Booking.id.desc())
         )
