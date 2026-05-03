@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	const ticketAdjustTabs = document.getElementById("ticketAdjustTabs");
 	const ticketAdjustForm = document.getElementById("ticketAdjustForm");
 	const ticketAdjustInitialDataScript = document.getElementById("ticketAdjustInitialData");
+	const organizerEventDetailContextScript = document.getElementById("organizerEventDetailContext");
 	const ticketAdjustUpdateUrl = ticketAdjustModal ? (ticketAdjustModal.getAttribute("data-update-url") || "") : "";
 	const adjustTicketTypeIdInput = document.getElementById("adjustTicketTypeId");
 	const adjustTicketTypeName = document.getElementById("adjustTicketTypeName");
@@ -34,8 +35,24 @@ document.addEventListener("DOMContentLoaded", function () {
 	const adjustTicketDescInput = document.getElementById("adjustTicketDescInput");
 	const adjustSubmitBtn = ticketAdjustForm ? ticketAdjustForm.querySelector("button[type='submit']") : null;
 
-	const SUGGESTED_PRICE = "800000";
+	const suggestedPriceByTicketId = new Map();
+	let isSuggestingPrice = false;
 	let activeAdjustTicketIndex = 0;
+
+	function parseEventDetailContext() {
+		if (!organizerEventDetailContextScript) {
+			return {};
+		}
+
+		try {
+			const raw = JSON.parse(organizerEventDetailContextScript.textContent || "{}");
+			return raw && typeof raw === "object" ? raw : {};
+		} catch (e) {
+			return {};
+		}
+	}
+
+	const eventDetailContext = parseEventDetailContext();
 
 	function parseAdjustInitialData() {
 		if (!ticketAdjustInitialDataScript) {
@@ -96,6 +113,188 @@ document.addEventListener("DOMContentLoaded", function () {
 			return "PENDING";
 		}
 		return text;
+	}
+
+	function setSuggestPriceLoading(isLoading) {
+		isSuggestingPrice = Boolean(isLoading);
+		if (adjustSubmitBtn) {
+			adjustSubmitBtn.disabled = isSuggestingPrice;
+		}
+		if (adjustSuggestedPriceCheckbox) {
+			adjustSuggestedPriceCheckbox.disabled = isSuggestingPrice;
+		}
+		if (adjustCustomPriceCheckbox) {
+			adjustCustomPriceCheckbox.disabled = isSuggestingPrice;
+		}
+		if (adjustSuggestedPriceInput) {
+			adjustSuggestedPriceInput.value = isSuggestingPrice ? "Đang gợi ý..." : (adjustSuggestedPriceInput.value || "");
+		}
+	}
+
+	function getActiveTicketForAdjust() {
+		return ticketAdjustItems && ticketAdjustItems.length ? ticketAdjustItems[activeAdjustTicketIndex] : null;
+	}
+
+	function getSuggestedPriceForTicket(ticket) {
+		if (!ticket || !ticket.id) {
+			return null;
+		}
+		const cached = suggestedPriceByTicketId.get(ticket.id);
+		return cached != null ? String(cached) : null;
+	}
+
+	function getEventContextValue(key, fallback) {
+		if (!eventDetailContext || typeof eventDetailContext !== "object") {
+			return fallback;
+		}
+		if (!(key in eventDetailContext)) {
+			return fallback;
+		}
+		return eventDetailContext[key];
+	}
+
+	function buildSuggestPricePayload(ticket, saleStartValue, saleEndValue, remainingQty) {
+		const eventIdRaw = getEventContextValue("eventId", null);
+		const eventTypeIdRaw = getEventContextValue("eventTypeId", null);
+		const locationRaw = getEventContextValue("location", "");
+		const startTimeRaw = getEventContextValue("startTime", "");
+		const endTimeRaw = getEventContextValue("endTime", "");
+		const hasFaceRegRaw = getEventContextValue("hasFaceReg", true);
+		const limitQuantityRaw = getEventContextValue("limitQuantity", null);
+
+		const eventId = Number(eventIdRaw);
+		const eventTypeId = Number(eventTypeIdRaw);
+		const limitQuantity = limitQuantityRaw == null || limitQuantityRaw === "" ? null : Number(limitQuantityRaw);
+
+		const sold = normalizeQuantity(ticket ? ticket.soldQuantity : 0);
+		const remaining = normalizeQuantity(remainingQty);
+		const totalTicketQuantity = sold + remaining;
+
+		return {
+			event: {
+				eventId: Number.isFinite(eventId) ? eventId : null,
+				eventTypeId: Number.isFinite(eventTypeId) ? eventTypeId : null,
+				location: String(locationRaw || "").trim(),
+				startTime: String(startTimeRaw || "").trim(),
+				endTime: String(endTimeRaw || "").trim(),
+				hasFaceReg: Boolean(hasFaceRegRaw),
+				limitQuantity: Number.isFinite(limitQuantity) && limitQuantity > 0 ? limitQuantity : null,
+			},
+			tickets: [
+				{
+					ticketTypeName: String((ticket && ticket.name) || "").trim(),
+					ticketQuantity: totalTicketQuantity,
+					saleStart: String(saleStartValue || "").trim(),
+					saleEnd: String(saleEndValue || "").trim(),
+				},
+			],
+		};
+	}
+
+	function validateSuggestPayload(payload) {
+		const event = payload && payload.event ? payload.event : null;
+		const tickets = payload && Array.isArray(payload.tickets) ? payload.tickets : [];
+		const firstTicket = tickets.length ? tickets[0] : null;
+
+		if (!event || !firstTicket) {
+			window.alert("Dữ liệu gợi ý giá vé không hợp lệ.");
+			return false;
+		}
+		if (!event.eventId) {
+			window.alert("Không tìm thấy sự kiện để gợi ý giá vé.");
+			return false;
+		}
+		if (!event.eventTypeId) {
+			window.alert("Thiếu thể loại sự kiện nên không thể gợi ý giá vé.");
+			return false;
+		}
+		if (!event.location) {
+			window.alert("Thiếu địa điểm nên không thể gợi ý giá vé.");
+			return false;
+		}
+		if (!event.startTime || !event.endTime) {
+			window.alert("Thiếu thời gian sự kiện nên không thể gợi ý giá vé.");
+			return false;
+		}
+		if (!firstTicket.ticketTypeName) {
+			window.alert("Thiếu tên vé nên không thể gợi ý giá vé.");
+			return false;
+		}
+		if (!firstTicket.ticketQuantity || Number(firstTicket.ticketQuantity) <= 0) {
+			window.alert("Số lượng vé phải lớn hơn 0 để gợi ý giá.");
+			return false;
+		}
+		if (!firstTicket.saleStart || !firstTicket.saleEnd) {
+			window.alert("Vui lòng nhập đầy đủ thời gian bán vé trước khi gợi ý giá.");
+			return false;
+		}
+		if (new Date(event.endTime) < new Date(event.startTime)) {
+			window.alert("Thời gian kết thúc sự kiện phải sau thời gian bắt đầu.");
+			return false;
+		}
+		if (new Date(firstTicket.saleEnd) < new Date(firstTicket.saleStart)) {
+			window.alert("Thời gian kết thúc bán vé phải sau thời gian bắt đầu.");
+			return false;
+		}
+
+		return true;
+	}
+
+	async function fetchSuggestedPriceForActiveTicket() {
+		const ticket = getActiveTicketForAdjust();
+		if (!ticket || !ticket.id) {
+			return null;
+		}
+
+		const saleStartValue = adjustSaleStartInput ? (adjustSaleStartInput.value || "") : "";
+		const saleEndValue = adjustSaleEndInput ? (adjustSaleEndInput.value || "") : "";
+		const remainingQty = adjustRemainingQtyInput ? adjustRemainingQtyInput.value : 0;
+		const payload = buildSuggestPricePayload(ticket, saleStartValue, saleEndValue, remainingQty);
+		if (!validateSuggestPayload(payload)) {
+			return null;
+		}
+
+		setSuggestPriceLoading(true);
+		try {
+			const response = await fetch("/api/organizer/ticket-types/suggest-price", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(payload),
+			});
+
+			if (response.status === 401) {
+				throw new Error("unauthorized");
+			}
+
+			const result = await response.json().catch(function () {
+				return {};
+			});
+
+			if (!response.ok) {
+				throw new Error(result.message || "Không thể gợi ý giá vé.");
+			}
+
+			const suggestions = result && Array.isArray(result.suggestions) ? result.suggestions : [];
+			const first = suggestions.length ? suggestions[0] : null;
+			const suggested = first && typeof first.suggestedPrice === "number" ? first.suggestedPrice : null;
+			if (!Number.isFinite(suggested) || suggested < 0) {
+				throw new Error("Không nhận được giá gợi ý hợp lệ.");
+			}
+
+			suggestedPriceByTicketId.set(ticket.id, Math.round(suggested));
+			return String(Math.round(suggested));
+		} catch (error) {
+			if (String(error && error.message) === "unauthorized") {
+				window.alert("Bạn cần đăng nhập tài khoản nhà tổ chức để dùng chức năng này.");
+				return null;
+			}
+			window.alert(error.message || "Không thể gợi ý giá vé.");
+			return null;
+		} finally {
+			setSuggestPriceLoading(false);
+		}
 	}
 
 	function setActiveTicketChip(nextChip) {
@@ -271,6 +470,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
 		if (adjustSuggestedPriceCheckbox.checked) {
 			adjustCustomPriceCheckbox.checked = false;
+			if (adjustPriceInput) {
+				const ticket = getActiveTicketForAdjust();
+				const suggested = getSuggestedPriceForTicket(ticket);
+				if (suggested != null) {
+					adjustPriceInput.value = normalizePrice(suggested);
+				}
+			}
 			adjustPriceInput.disabled = true;
 			return;
 		}
@@ -331,7 +537,8 @@ document.addEventListener("DOMContentLoaded", function () {
 			adjustPriceInput.value = normalizePrice(targetTicket.price);
 		}
 		if (adjustSuggestedPriceInput) {
-			adjustSuggestedPriceInput.value = SUGGESTED_PRICE;
+			const cachedSuggested = getSuggestedPriceForTicket(targetTicket);
+			adjustSuggestedPriceInput.value = cachedSuggested != null ? cachedSuggested : "";
 			adjustSuggestedPriceInput.setAttribute("readonly", "readonly");
 		}
 		if (adjustRemainingQtyInput) {
@@ -400,6 +607,29 @@ document.addEventListener("DOMContentLoaded", function () {
 			if (adjustSuggestedPriceCheckbox.checked && adjustCustomPriceCheckbox) {
 				adjustCustomPriceCheckbox.checked = false;
 			}
+
+			if (adjustSuggestedPriceCheckbox.checked) {
+				syncAdjustPriceMode();
+				fetchSuggestedPriceForActiveTicket().then(function (suggested) {
+					if (!adjustSuggestedPriceCheckbox.checked) {
+						return;
+					}
+					if (suggested == null) {
+						adjustSuggestedPriceCheckbox.checked = false;
+						if (adjustCustomPriceCheckbox) {
+							adjustCustomPriceCheckbox.checked = true;
+						}
+						syncAdjustPriceMode();
+						return;
+					}
+					if (adjustSuggestedPriceInput) {
+						adjustSuggestedPriceInput.value = suggested;
+					}
+					syncAdjustPriceMode();
+				});
+				return;
+			}
+
 			syncAdjustPriceMode();
 		});
 	}
@@ -457,8 +687,15 @@ document.addEventListener("DOMContentLoaded", function () {
 			syncAdjustPriceMode();
 
 			const payloadPrice = adjustSuggestedPriceCheckbox && adjustSuggestedPriceCheckbox.checked
-				? SUGGESTED_PRICE
+				? normalizePrice(adjustSuggestedPriceInput ? adjustSuggestedPriceInput.value : 0)
 				: normalizePrice(adjustPriceInput ? adjustPriceInput.value : 0);
+
+			if (adjustSuggestedPriceCheckbox && adjustSuggestedPriceCheckbox.checked) {
+				if (!String(payloadPrice || "").trim() || payloadPrice === "0") {
+					window.alert("Chưa có giá gợi ý hợp lệ. Vui lòng thử lại.");
+					return;
+				}
+			}
 
 			const remainingQty = normalizeQuantity(adjustRemainingQtyInput ? adjustRemainingQtyInput.value : 0);
 			const saleStartValue = adjustSaleStartInput ? (adjustSaleStartInput.value || "") : "";

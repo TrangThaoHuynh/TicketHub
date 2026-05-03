@@ -399,33 +399,105 @@
 /* Flash Messages (Override) */
 .flash-messages {
     position: fixed;
-    top: 2rem;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 1.25rem;
+    right: 1.25rem;
     z-index: 1060;
-    width: 90%;
-    max-width: 500px;
+    width: min(420px, calc(100% - 2rem));
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    pointer-events: none;
 }
 
 .flash-messages .alert {
-    margin-bottom: 1rem;
+    margin: 0;
     border-radius: 16px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 16px 28px rgba(15, 23, 42, 0.15);
     border: none;
-    backdrop-filter: blur(10px);
-    padding: 1rem 1.5rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 0.95rem 1rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.9rem;
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateX(28px) scale(0.98);
+    animation: toast-in 0.3s ease forwards;
+}
+
+.flash-messages .alert.hide {
+    animation: toast-out 0.24s ease forwards;
+}
+
+.alert-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.alert-content i {
+    margin-top: 0.1rem;
+    font-size: 1.05rem;
+}
+
+.alert-close {
+    border: 0;
+    background: transparent;
+    padding: 0.2rem;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    color: inherit;
+}
+
+.alert-close:hover {
+    background: rgba(15, 23, 42, 0.08);
+}
+
+.alert-close:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
 }
 
 .alert-danger {
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.2);
-    color: #dc2626;
+    background: rgba(254, 242, 242, 0.9);
+    border: 1px solid rgba(239, 68, 68, 0.28);
+    color: #b91c1c;
 }
 
 .alert-success {
-    background: rgba(16, 185, 129, 0.1);
-    border: 1px solid rgba(16, 185, 129, 0.2);
-    color: #059669;
+    background: rgba(236, 253, 245, 0.9);
+    border: 1px solid rgba(16, 185, 129, 0.28);
+    color: #047857;
+}
+
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateX(28px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes toast-out {
+    from {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(36px) scale(0.98);
+    }
 }
 
 /* Responsive Design */
@@ -477,6 +549,12 @@
     .forgot-link,
     .google-login-btn {
         font-size: 0.9rem;
+    }
+
+    .flash-messages {
+        top: 0.9rem;
+        right: 0.9rem;
+        width: min(420px, calc(100% - 1.8rem));
     }
 }
 

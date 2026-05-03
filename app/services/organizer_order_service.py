@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import func, case
 
 from .. import db
 from ..models.booking import Booking
@@ -16,31 +15,36 @@ from ..models.ticket_type import TicketType
 from ..models.user import User
 
 
-PAID_STATUSES = {
-    "paid",
-    "success",
-    "succeeded",
-    "completed",
-    "complete",
-    "done",
-    "ok",
+def _normalize_status_upper(value: Any) -> str:
+    return str(value or "").strip().upper()
+
+
+def _compute_order_status(booking_status: Any, payment_status: Any) -> str:
+    """Chuẩn hoá trạng thái đơn theo enum trong DB.
+
+    Rule theo yêu cầu:
+    - FAILED nếu booking và payment đều FAILED
+    - SUCCESS nếu booking hoặc payment SUCCESS
+    - còn lại PENDING
+
+    - BookingStatus: PENDING | SUCCESS | FAILED
+    - PaymentStatus: SUCCESS | FAILED
+    """
+    booking_norm = _normalize_status_upper(booking_status)
+    payment_norm = _normalize_status_upper(payment_status)
+
+    if booking_norm == "SUCCESS" or payment_norm == "SUCCESS":
+        return "SUCCESS"
+    if booking_norm == "FAILED" and payment_norm == "FAILED":
+        return "FAILED"
+    return "PENDING"
+
+
+ORDER_STATUS_LABELS = {
+    "PENDING": "Đang chờ thanh toán",
+    "SUCCESS": "Đã thanh toán",
+    "FAILED": "Thanh toán thất bại",
 }
-
-
-def _normalize_status(value: Any) -> str:
-    return (value or "").__str__().strip().lower()
-
-
-def _is_paid(booking_status: Any, payment_status: Any) -> bool:
-    booking_status_norm = _normalize_status(booking_status)
-    payment_status_norm = _normalize_status(payment_status)
-
-    if booking_status_norm in PAID_STATUSES:
-        return True
-    if payment_status_norm in PAID_STATUSES:
-        return True
-
-    return False
 
 
 def _format_dt(dt: Any) -> str:
@@ -76,6 +80,12 @@ def list_orders_for_organizer(
             User.email.label("customer_email"),
             func.count(Ticket.id).label("ticket_count"),
             func.max(Payment.status).label("payment_status"),
+            func.max(
+                case(
+                    (func.upper(func.coalesce(Ticket.status, "")) == "CANCELLED", 1),
+                    else_=0,
+                )
+            ).label("has_cancelled_ticket"),
         )
         .join(User, User.id == Booking.customerId)
         .join(Ticket, Ticket.bookingId == Booking.id)
@@ -104,7 +114,8 @@ def list_orders_for_organizer(
 
     orders: list[dict[str, Any]] = []
     for row in rows:
-        paid = _is_paid(row.booking_status, row.payment_status)
+        order_status = _compute_order_status(row.booking_status, row.payment_status)
+        has_cancelled_ticket = bool(getattr(row, "has_cancelled_ticket", 0) or 0)
         orders.append(
             {
                 "id": row.id,
@@ -114,7 +125,11 @@ def list_orders_for_organizer(
                 "customer_email": row.customer_email,
                 "ticket_count": int(row.ticket_count or 0),
                 "total_amount": float(row.total_amount) if row.total_amount is not None else None,
-                "status": "paid" if paid else "unpaid",
+                "booking_status": _normalize_status_upper(row.booking_status),
+                "payment_status": _normalize_status_upper(row.payment_status),
+                "order_status": order_status,
+                "order_status_label": ORDER_STATUS_LABELS.get(order_status, order_status),
+                "has_cancelled_ticket": bool(order_status == "SUCCESS" and has_cancelled_ticket),
             }
         )
 
@@ -159,7 +174,7 @@ def get_order_detail_for_organizer(
         .order_by(Payment.id.desc())
         .first()
     )
-    paid = _is_paid(getattr(booking, "status", None), getattr(payment, "status", None))
+    order_status = _compute_order_status(getattr(booking, "status", None), getattr(payment, "status", None))
 
     # Tickets for this booking + event
     ticket_rows = (
@@ -177,7 +192,10 @@ def get_order_detail_for_organizer(
 
     tickets: list[dict[str, Any]] = []
     total_amount = Decimal("0")
+    has_cancelled_ticket = False
     for ticket, ticket_type_name, _ in ticket_rows:
+        if _normalize_status_upper(getattr(ticket, "status", None)) == "CANCELLED":
+            has_cancelled_ticket = True
         price = getattr(ticket, "price", None)
         if price is not None:
             total_amount += Decimal(str(price))
@@ -202,7 +220,11 @@ def get_order_detail_for_organizer(
         "code": _order_code(int(booking.id)),
         "created_at": _format_dt(getattr(booking, "createdAt", None)),
         "payment_method": "VNPAY" if payment is not None else "—",
-        "status": "paid" if paid else "unpaid",
+        "booking_status": _normalize_status_upper(getattr(booking, "status", None)),
+        "payment_status": _normalize_status_upper(getattr(payment, "status", None)),
+        "order_status": order_status,
+        "order_status_label": ORDER_STATUS_LABELS.get(order_status, order_status),
+        "has_cancelled_ticket": bool(order_status == "SUCCESS" and has_cancelled_ticket),
         "ticket_count": len(tickets),
         "total_amount": float(total_amount),
     }

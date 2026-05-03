@@ -1,14 +1,16 @@
 {% extends "base.html" %} {% block styles %}
-<link
-  rel="stylesheet"
-  href="{{ url_for('login.static', filename='css/admin_report.css') }}"
-/>
+<link rel="stylesheet" href="{{ url_for('login.static', filename='css/admin_report.css') }}" />
 {% endblock %} {% block content %} {% set selected_organizer_id =
 dashboard.filters.organizer_id %}
 
 <section class="report-page">
   <div class="container">
-    <h1 class="dashboard-title">Báo cáo thống kê</h1>
+    <div class="d-flex align-items-center mb-3">
+      <h1 class="dashboard-title mb-0">Báo cáo thống kê</h1>
+      <a href="{{ url_for('admin.index') }}" class="btn btn-outline-primary ms-auto">
+        Quay lại Admin Home
+      </a>
+    </div>
 
     <div class="row g-4 mb-2">
       <div class="col-md-6">
@@ -65,30 +67,17 @@ dashboard.filters.organizer_id %}
 
         <div class="col-md-3">
           <label class="form-label fw-semibold">Ngày bắt đầu</label>
-          <input
-            class="form-control"
-            type="date"
-            name="startDate"
-            value="{{ dashboard.filters.start_date }}"
-          />
+          <input class="form-control" type="date" name="startDate" value="{{ dashboard.filters.start_date }}" />
         </div>
 
         <div class="col-md-2">
           <label class="form-label fw-semibold">Ngày kết thúc</label>
-          <input
-            class="form-control"
-            type="date"
-            name="endDate"
-            value="{{ dashboard.filters.end_date }}"
-          />
+          <input class="form-control" type="date" name="endDate" value="{{ dashboard.filters.end_date }}" />
         </div>
 
         <div class="col-md-2 d-flex gap-2">
           <button type="submit" class="btn btn-primary w-100">Lọc</button>
-          <a
-            href="{{ url_for('reports.admin_reports') }}"
-            class="btn btn-outline-secondary w-100"
-          >
+          <a href="{{ url_for('reports.admin_reports') }}" class="btn btn-outline-secondary w-100">
             Reset
           </a>
         </div>
@@ -102,12 +91,9 @@ dashboard.filters.organizer_id %}
           {% if dashboard.charts.time_revenue.labels %}
           <div class="chart-scroll-wrapper">
             <div class="chart-scroll-inner" id="timeRevenueChartWrap">
-              <canvas
-                id="timeRevenueChart"
-                height="300"
+              <canvas id="timeRevenueChart" height="300"
                 data-labels='{{ dashboard.charts.time_revenue["labels"] | tojson }}'
-                data-values='{{ dashboard.charts.time_revenue["values"] | tojson }}'
-              ></canvas>
+                data-values='{{ dashboard.charts.time_revenue["values"] | tojson }}'></canvas>
             </div>
           </div>
           {% else %}
@@ -124,12 +110,9 @@ dashboard.filters.organizer_id %}
           {% if dashboard.charts.event_revenue.labels %}
           <div class="chart-scroll-wrapper">
             <div class="chart-scroll-inner" id="eventRevenueChartWrap">
-              <canvas
-                id="eventRevenueChart"
-                height="300"
+              <canvas id="eventRevenueChart" height="300"
                 data-labels='{{ dashboard.charts.event_revenue["labels"] | tojson }}'
-                data-values='{{ dashboard.charts.event_revenue["values"] | tojson }}'
-              ></canvas>
+                data-values='{{ dashboard.charts.event_revenue["values"] | tojson }}'></canvas>
             </div>
           </div>
           {% else %}
@@ -146,12 +129,9 @@ dashboard.filters.organizer_id %}
         <div class="chart-box">
           <h5>Đơn vé theo trạng thái</h5>
           {% if dashboard.charts.booking_status.labels %}
-          <canvas
-            id="bookingStatusChart"
-            height="240"
+          <canvas id="bookingStatusChart" height="240"
             data-labels='{{ dashboard.charts.booking_status["labels"] | tojson }}'
-            data-values='{{ dashboard.charts.booking_status["values"] | tojson }}'
-          ></canvas>
+            data-values='{{ dashboard.charts.booking_status["values"] | tojson }}'></canvas>
           {% else %}
           <div class="alert alert-light border mb-0">Không có dữ liệu.</div>
           {% endif %}
@@ -162,12 +142,9 @@ dashboard.filters.organizer_id %}
         <div class="chart-box">
           <h5>Sự kiện theo trạng thái</h5>
           {% if dashboard.charts.event_status.labels %}
-          <canvas
-            id="eventStatusChart"
-            height="240"
+          <canvas id="eventStatusChart" height="240"
             data-labels='{{ dashboard.charts.event_status["labels"] | tojson }}'
-            data-values='{{ dashboard.charts.event_status["values"] | tojson }}'
-          ></canvas>
+            data-values='{{ dashboard.charts.event_status["values"] | tojson }}'></canvas>
           {% else %}
           <div class="alert alert-light border mb-0">Không có dữ liệu.</div>
           {% endif %}
@@ -178,12 +155,9 @@ dashboard.filters.organizer_id %}
         <div class="chart-box">
           <h5>Vé theo trạng thái</h5>
           {% if dashboard.charts.ticket_status.labels %}
-          <canvas
-            id="ticketStatusChart"
-            height="240"
+          <canvas id="ticketStatusChart" height="240"
             data-labels='{{ dashboard.charts.ticket_status["labels"] | tojson }}'
-            data-values='{{ dashboard.charts.ticket_status["values"] | tojson }}'
-          ></canvas>
+            data-values='{{ dashboard.charts.ticket_status["values"] | tojson }}'></canvas>
           {% else %}
           <div class="alert alert-light border mb-0">Không có dữ liệu.</div>
           {% endif %}

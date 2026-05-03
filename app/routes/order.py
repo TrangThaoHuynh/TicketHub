@@ -1,11 +1,10 @@
-from flask import Blueprint, render_template, abort, send_file, request, jsonify, url_for
+from flask import Blueprint, render_template, abort, send_file, request, jsonify, url_for, redirect
 from ..models.booking import Booking
 from ..services.ticket_email_service import send_ticket_email_by_booking
 from flask_login import login_required, current_user
 from io import BytesIO
 import uuid
-from sqlalchemy import func
-from sqlalchemy.orm import aliased
+from sqlalchemy import func, case
 from sqlalchemy.exc import ProgrammingError
 
 from .. import db
@@ -20,6 +19,46 @@ from ..services.ticket_service import (
     build_ticket_qr_png,
 )
 orders_bp = Blueprint('orders', __name__, url_prefix='/orders')
+
+
+def _norm_status(value) -> str:
+    return str(value or '').strip().upper()
+
+
+def _compute_order_status(booking_status, payment_status) -> str:
+    """Chuẩn hoá trạng thái đơn theo enum trong DB.
+
+    Rule theo yêu cầu:
+    - FAILED nếu booking và payment đều FAILED
+    - SUCCESS nếu booking hoặc payment SUCCESS
+    - còn lại PENDING
+
+    - BookingStatus: PENDING | SUCCESS | FAILED
+    - PaymentStatus: SUCCESS | FAILED
+    """
+    b = _norm_status(booking_status)
+    p = _norm_status(payment_status)
+
+    if b == 'SUCCESS' or p == 'SUCCESS':
+        return 'SUCCESS'
+    if b == 'FAILED' and p == 'FAILED':
+        return 'FAILED'
+    return 'PENDING'
+
+
+ORDER_STATUS_LABELS = {
+    'PENDING': 'Đang chờ thanh toán',
+    'SUCCESS': 'Đã thanh toán',
+    'FAILED': 'Thanh toán thất bại',
+}
+
+
+TICKET_STATUS_LABELS = {
+    'PENDING': 'Chờ xác thực',
+    'VALID': 'Hợp lệ',
+    'USED': 'Đã sử dụng',
+    'CANCELLED': 'Đã hủy',
+}
 
 def _gen_ticket_code():
     """Tạo mã vé duy nhất"""
@@ -39,25 +78,9 @@ def ticket_detail(ticket_id):
     t.ticket_type = TicketType.query.get(t.ticketTypeId)
     t.event = Event.query.get(t.ticket_type.eventId) if t.ticket_type else None
 
-    booking = db.session.get(Booking, t.bookingId) if t.bookingId else None
-    payment = (
-        Payment.query.filter_by(bookingId=t.bookingId)
-        .order_by(Payment.id.desc())
-        .first()
-    ) if t.bookingId else None
-
-    booking_status = str(getattr(booking, "status", "") or "").upper()
-    payment_status = str(getattr(payment, "status", "") or "").upper()
-    show_qr = (
-        (booking_status == "SUCCESS" or payment_status == "SUCCESS")
-        and booking_status != "FAILED"
-        and payment_status != "FAILED"
-    )
-
-    if show_qr:
+    if not (t.event and t.event.hasFaceReg):
         ensure_ticket_qr_token(t)
-
-    return render_template("ticket_detail.html", t=t, show_qr=show_qr)
+    return render_template("ticket_detail.html", t=t)
 
 @orders_bp.route("/ticket/<ticket_id>/qr.png")
 @login_required
@@ -70,23 +93,13 @@ def ticket_qr_image(ticket_id):
     if t.customerId != current_user.id:
         abort(403)
 
-    booking = db.session.get(Booking, t.bookingId) if t.bookingId else None
-    payment = (
-        Payment.query.filter_by(bookingId=t.bookingId)
-        .order_by(Payment.id.desc())
-        .first()
-    ) if t.bookingId else None
+    ticket_type = TicketType.query.get(t.ticketTypeId) if t.ticketTypeId else None
+    event = Event.query.get(ticket_type.eventId) if ticket_type else None
+    if event and bool(event.hasFaceReg):
+        abort(404)
 
-    booking_status = str(getattr(booking, "status", "") or "").upper()
-    payment_status = str(getattr(payment, "status", "") or "").upper()
-    show_qr = (
-        (booking_status == "SUCCESS" or payment_status == "SUCCESS")
-        and booking_status != "FAILED"
-        and payment_status != "FAILED"
-    )
-
-    if not show_qr:
-        abort(403)
+    if (t.qrCode or '').startswith('http'):
+        return redirect(t.qrCode)
 
     png_bytes = build_ticket_qr_png(t)
     buf = BytesIO(png_bytes)
@@ -124,7 +137,13 @@ def my_tickets():
                 Event.image.label('event_image'),
                 func.count(Ticket.id).label('quantity'),
                 total_amount_expr.label('total_amount'),
-                LatestPayment.status.label('payment_status'),
+                func.max(Payment.status).label('payment_status'),
+                func.max(
+                    case(
+                        (func.upper(func.coalesce(Ticket.status, '')) == 'CANCELLED', 1),
+                        else_=0,
+                    )
+                ).label('has_cancelled_ticket'),
             )
             .join(Ticket, Ticket.bookingId == Booking.id)
             .join(TicketType, TicketType.id == Ticket.ticketTypeId)
@@ -149,11 +168,8 @@ def my_tickets():
 
         orders = []
         for row in bookings.items:
-            booking_status = str(row.booking_status or '').upper()
-            payment_status = str(row.payment_status or '').upper()
-
-            is_failed = booking_status == 'FAILED' or payment_status == 'FAILED'
-            is_paid = (booking_status == 'SUCCESS' or payment_status == 'SUCCESS') and not is_failed
+            order_status = _compute_order_status(row.booking_status, row.payment_status)
+            has_cancelled_ticket = bool(getattr(row, 'has_cancelled_ticket', 0) or 0)
 
             orders.append(
                 {
@@ -164,7 +180,11 @@ def my_tickets():
                     'created_at': row.created_at.strftime('%d-%m-%Y') if row.created_at else '',
                     'quantity': int(row.quantity or 0),
                     'total_amount': float(row.total_amount) if row.total_amount is not None else 0,
-                    'status': 'failed' if is_failed else 'paid' if is_paid else 'pending',
+                    'booking_status': _norm_status(row.booking_status),
+                    'payment_status': _norm_status(row.payment_status),
+                    'order_status': order_status,
+                    'order_status_label': ORDER_STATUS_LABELS.get(order_status, order_status),
+                    'has_cancelled_ticket': has_cancelled_ticket,
                 }
             )
 
@@ -210,11 +230,8 @@ def booking_detail(booking_id: int):
             .first()
         )
 
-        booking_status = str(getattr(booking, 'status', '') or '').upper()
-        payment_status = str(getattr(payment, 'status', '') or '').upper()
-
-        # Nếu lần thanh toán mới nhất FAILED thì xem như chưa thanh toán thành công
-        paid = (booking_status == 'SUCCESS' or payment_status == 'SUCCESS') and booking_status != 'FAILED' and payment_status != 'FAILED'
+        order_status = _compute_order_status(getattr(booking, 'status', ''), getattr(payment, 'status', ''))
+        paid = (order_status == 'SUCCESS')
 
         ticket_rows = (
             db.session.query(Ticket, TicketType, Event)
@@ -232,9 +249,22 @@ def booking_detail(booking_id: int):
 
         groups = {}
         total = 0.0
+        has_valid_ticket = False
+        has_cancelled_ticket = False
 
         for t, tt, _event in ticket_rows:
             code = t.ticketCode or t.id
+            has_face_reg = bool(getattr(_event, 'hasFaceReg', False))
+            qr_url = None
+            if not has_face_reg:
+                qr_url = t.qrCode if (t.qrCode or '').startswith('http') else url_for('orders.ticket_qr_image', ticket_id=t.id)
+            ticket_status = str(t.status or '').upper()
+            ticket_status_label = TICKET_STATUS_LABELS.get(ticket_status, ticket_status or 'N/A')
+
+            if ticket_status == 'VALID':
+                has_valid_ticket = True
+            if ticket_status == 'CANCELLED':
+                has_cancelled_ticket = True
 
             if t.price is not None:
                 total += float(t.price)
@@ -247,12 +277,17 @@ def booking_detail(booking_id: int):
                     'ticket_id': t.id,
                     'holder_name': t.fullName,
                     'ticket_code': code,
-                    'qr_url': url_for('orders.ticket_qr_image', ticket_id=t.id),
+                    'qr_url': qr_url,
+                    'has_face_reg': has_face_reg,
+                    'status': ticket_status,
+                    'status_label': ticket_status_label,
                 }
             )
 
         total_amount = float(booking.totalAmount) if booking.totalAmount is not None else total
         booking_code = str(booking.id)
+        is_refunded = bool(order_status == 'SUCCESS' and has_cancelled_ticket)
+        can_refund_booking = bool(paid and has_valid_ticket and not has_cancelled_ticket)
 
         return render_template(
             'my_ticket_order_detail.html',
@@ -260,11 +295,15 @@ def booking_detail(booking_id: int):
             booking_code=booking_code,
             event=event,
             paid=paid,
+            order_status=order_status,
+            order_status_label=ORDER_STATUS_LABELS.get(order_status, order_status),
+            is_refunded=is_refunded,
             payment=payment,
             total_amount=total_amount,
             quantity=len(ticket_rows),
             representative_name=(current_user.name or current_user.username),
             groups=groups,
+            can_refund_booking=can_refund_booking,
             show_search=False,
         )
 

@@ -1,7 +1,7 @@
 import os
 import cloudinary
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, has_request_context
 from authlib.integrations.flask_client import OAuth
 from flask_mail import Mail
 from flask_sqlalchemy import SQLAlchemy
@@ -11,7 +11,7 @@ from .config import Config
 from flask import session
 
 # Load biến môi trường
-load_dotenv()
+load_dotenv(override=True)
 
 # Configure Cloudinary
 cloudinary_url = os.getenv("CLOUDINARY_URL")
@@ -44,7 +44,9 @@ def _seed_lookup_tables():
         OrganizerStatus: ["PENDING", "APPROVED", "REJECTED"],
         PaymentStatus: ["SUCCESS", "FAILED"],
         TicketStatus: ["PENDING", "VALID", "USED", "CANCELLED"],
+
         EventStatus: ["PENDING", "PUBLISHED", "FINISHED", "CANCELLED"],
+
     }
 
     changed = False
@@ -82,10 +84,11 @@ def create_app():
     @login_manager.user_loader
     def load_user(user_id: str):
         from .models.user import User
-        return User.query.get(int(user_id))
+        return db.session.get(User, int(user_id))
     
     from . import models
     from .routes.event_routes import event_bp
+    from .routes import ticket_routes
     from .routes.auth_routes import login_bp
     from .routes.main import main
     from .routes.organizer_orders import organizer_bp
@@ -127,6 +130,15 @@ def create_app():
         is_admin = False
         is_organizer = False
         is_customer = False
+
+        # Tránh truy cập session khi không có request context (background jobs).
+        if not has_request_context():
+            return dict(
+                current_user=None,
+                is_admin=False,
+                is_organizer=False,
+                is_customer=False,
+            )
 
         # Nếu session có user_id thì lấy user hiện tại
         if 'user_id' in session:
